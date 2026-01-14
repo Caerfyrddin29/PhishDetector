@@ -2,7 +2,7 @@
 
 A sophisticated phishing detection system with modular Flask backend and Chrome browser extension for Gmail integration.
 
-## 🚀 Features
+## Features
 
 ### Advanced Detection Engine
 - **Multi-layered Analysis**: Sophisticated algorithms with 0-100 risk scoring
@@ -30,7 +30,7 @@ A sophisticated phishing detection system with modular Flask backend and Chrome 
 - **Theme Support**: Light and dark mode options
 - **Manual Refresh**: On-demand data updates
 
-## 🏗️ Architecture
+## Architecture
 
 ### Modular Backend Design
 ```
@@ -53,7 +53,7 @@ extension/
 └── popup.js         # Popup functionality
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 ```bash
@@ -110,11 +110,11 @@ curl -X POST http://127.0.0.1:5001/analyze \
 curl http://127.0.0.1:5001/test
 ```
 
-## 📊 Scoring System
+## Scoring System
 
-- **0-29**: Safe (🟢 Green)
-- **30-69**: Suspicious (🟡 Yellow)  
-- **70-100**: Phishing (🔴 Red)
+- **0-29**: Safe (🟢)
+- **30-69**: Suspicious (🟡)  
+- **70-100**: Phishing (🔴)
 
 ### Detection Categories
 - **Structural Threats**: Hidden links (100 points), Image-heavy emails (50 points)
@@ -123,7 +123,7 @@ curl http://127.0.0.1:5001/test
 - **Linguistic Indicators**: Suspicious keywords (up to 50 points)
 - **Technical Threats**: High-entropy domains (30 points), IP URLs (50 points)
 
-## 🌍 Multilingual Detection
+## Multilingual Detection
 
 ### Supported Languages
 - **English**: Full keyword coverage
@@ -145,7 +145,7 @@ curl http://127.0.0.1:5001/test
 - **Real-time Updates**: Threat databases updated automatically
 - **Visual Warnings**: Clear indicators for malicious content
 
-## 📈 Extension Features
+## Extension Features
 
 ### Email Alerts
 - **Score Display**: Large 24px font showing 0-100 risk score
@@ -163,7 +163,7 @@ curl http://127.0.0.1:5001/test
 - **Theme Support**: Light/dark mode toggle
 - **Manual Refresh**: On-demand data updates
 
-## 🔍 Advanced Detection
+## Advanced Detection
 
 ### Pattern Recognition
 - **URL Shorteners**: Multiple shortener detection
@@ -248,7 +248,7 @@ The backend runs in debug mode by default. Check the console for detailed error 
 - **v2.0**: Enhanced UI with charts and statistics
 - **v1.0**: Basic phishing detection
 
-## 📄 License
+## License
 
 This project is for educational and research purposes. Use responsibly and in accordance with applicable laws and regulations.
 
@@ -258,4 +258,4 @@ Contributions are welcome! Please ensure all tests pass and follow the existing 
 
 ---
 
-**PhishDetector Pro** - Advanced phishing protection for Gmail 🛡️
+**PhishDetector** - Advanced phishing protection for Gmail 🛡️
