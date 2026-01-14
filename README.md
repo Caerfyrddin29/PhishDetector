@@ -1,12 +1,13 @@
 # PhishDetector
 
-A phishing detection system with a Flask backend and Chrome browser extension for Gmail integration.
+A sophisticated phishing detection system with modular Flask backend and Chrome browser extension for Gmail integration.
 
-## Features
+## 🚀 Features
 
-- **Advanced Phishing Detection**: Multi-layered analysis with sophisticated algorithms
-- **Brand Protection**: Detects brand impersonation and typosquatting for major brands (PayPal, Google, Microsoft, Amazon, Netflix, Apple)
-- **Link Analysis**:
+### Advanced Detection Engine
+- **Multi-layered Analysis**: Sophisticated algorithms with 0-100 risk scoring
+- **Brand Protection**: Detects impersonation and typosquatting for PayPal, Google, Microsoft, Amazon, Netflix, Apple
+- **Link Analysis**: 
   - Local threat database checking (instant lookup)
   - Deceptive link detection (masked URLs)
   - Typosquatting detection using similarity algorithms
@@ -14,11 +15,45 @@ A phishing detection system with a Flask backend and Chrome browser extension fo
 - **Structural Analysis**:
   - Hidden/invisible link detection
   - Image-heavy email with low text detection
-- **Linguistic Analysis**: Pressure keyword detection (urgency, financial, security terms)
-- **Browser Extension**: Seamless Gmail integration with one-click scanning
-- **Threat Intelligence**: Uses comprehensive phishing databases with auto-updates
+- **Obfuscation Detection**: Leetspeak, URL encoding, excessive special characters
+- **Linguistic Analysis**: Multi-language pressure keyword detection
 
-## Quick Start
+### Multilingual Support
+- **Languages**: English, Chinese (中文), Arabic (العربية), Russian (Русский), Spanish (Español), French (Français)
+- **Auto-detection**: Automatically identifies email language
+- **Localized Keywords**: Language-specific suspicious keyword detection
+
+### Browser Extension
+- **Gmail Integration**: Seamless one-click scanning in Gmail interface
+- **Real-time Alerts**: Color-coded notifications with auto-dismiss
+- **Popup Dashboard**: Statistics, charts, and system health monitoring
+- **Theme Support**: Light and dark mode options
+- **Manual Refresh**: On-demand data updates
+
+## 🏗️ Architecture
+
+### Modular Backend Design
+```
+back/
+├── app.py           # Flask web server (API endpoints)
+├── analyzer.py      # Phishing analysis engine
+├── config.py        # Configuration settings
+├── db_manager.py    # Database management
+├── threat_intel.py  # Threat intelligence module
+└── phish_cache.db   # Local SQLite database
+```
+
+### Chrome Extension
+```
+extension/
+├── manifest.json    # Extension manifest
+├── background.js    # Service worker
+├── content.js       # Gmail integration
+├── popup.html       # Popup UI
+└── popup.js         # Popup functionality
+```
+
+## ⚡ Quick Start
 
 ### 1. Install Dependencies
 ```bash
@@ -27,8 +62,12 @@ pip install -r requirements.txt
 
 ### 2. Start the Backend Server
 ```bash
+# Option 1: Use the batch file (Windows)
+start_backend.bat
+
+# Option 2: Manual start
 cd back
-python simple_app.py
+python app.py
 ```
 The server will start on `http://127.0.0.1:5001`
 
@@ -38,157 +77,185 @@ The server will start on `http://127.0.0.1:5001`
 3. Click "Load unpacked" and select the `extension` folder
 4. The extension will appear in your browser toolbar
 
-### 4. Test the Enhanced UI
+### 4. Test the System
 1. Open Gmail
-2. Click the "🛡️ Scan Safety" button that appears in the email view
-3. Experience the new enhanced interface with:
+2. Click the "🛡️ Scan Safety" button in the email view
+3. Experience the enhanced interface:
    - **Large score display** (0-100 points)
-   - **Color-coded alerts** (Green/Yellow/Red)
+   - **Color-coded alerts** (🟢 Safe / 🟡 Caution / 🔴 Danger)
    - **Auto-dismiss countdown** (8 seconds)
    - **Malicious URL highlighting**
    - **Real-time chart** in popup dashboard
 
-## API Testing
+## 🔧 API Usage
 
-Test the backend directly:
+### Analyze Email Content
 ```bash
 curl -X POST http://127.0.0.1:5001/analyze \
   -H "Content-Type: application/json" \
-  -d '{"body": "Urgent: verify your paypal account now", "links": [{"href": "http://paypa1.com", "text": "paypal.com"}]}'
+  -d '{
+    "body": "Urgent: verify your paypal account now",
+    "links": [{"href": "http://paypa1.com", "text": "paypal.com"}],
+    "metadata": {
+      "sender": "security@paypal-update.com",
+      "hasHiddenLinks": false,
+      "imageCount": 0,
+      "textLength": 100
+    }
+  }'
 ```
 
-## Project Structure
-
-```
-├── back/                    # Flask backend
-│   ├── simple_app.py       # Main Flask application
-│   ├── analyzer.py         # Phishing analysis logic
-│   ├── config.py           # Configuration settings
-│   └── db_manager.py       # Database management
-├── extension/              # Chrome extension
-│   ├── manifest.json      # Extension manifest
-│   ├── background.js       # Service worker
-│   ├── content.js          # Gmail integration
-│   ├── popup.js           # Extension popup
-│   └── popup.html         # Popup UI
-└── requirements.txt        # Python dependencies
+### Health Check
+```bash
+curl http://127.0.0.1:5001/test
 ```
 
-## How It Works
+## 📊 Scoring System
 
-### Advanced Detection Engine
+- **0-29**: Safe (🟢 Green)
+- **30-69**: Suspicious (🟡 Yellow)  
+- **70-100**: Phishing (🔴 Red)
 
-The system uses a sophisticated multi-layered approach:
+### Detection Categories
+- **Structural Threats**: Hidden links (100 points), Image-heavy emails (50 points)
+- **Link-based Threats**: Blacklisted domains (100 points), Masked URLs (100 points)
+- **Brand Impersonation**: Unauthorized brand usage (70-85 points)
+- **Linguistic Indicators**: Suspicious keywords (up to 50 points)
+- **Technical Threats**: High-entropy domains (30 points), IP URLs (50 points)
 
-1. **Structural Analysis**
-   - Detects invisible link overlays (100 points)
-   - Identifies image-heavy emails with minimal text (50 points)
+## 🌍 Multilingual Detection
 
-2. **Link Analysis**
-   - **Local Database Check**: Instant lookup against 100K+ known phishing domains
-   - **Deceptive Text Detection**: Finds masked URLs where display text ≠ actual link
-   - **Typosquatting Detection**: Uses similarity algorithms to detect domain spoofing
-   - **Entropy Analysis**: Flags suspiciously random-looking domains
+### Supported Languages
+- **English**: Full keyword coverage
+- **Chinese (中文)**: 紧急, 验证, 暂停, 立即, 重要, 警告
+- **Arabic (العربية)**: عاجل, تحقق, معلق, فوري, حرج, إنذار
+- **Russian (Русский)**: срочно, проверить, приостановлен, немедленно
+- **Spanish (Español)**: urgente, verificar, suspendido, inmediato
+- **French (Français)**: urgent, vérifier, suspendu, action requise
 
-3. **Linguistic Analysis**
-   - **Urgency Keywords**: "urgent", "verify", "suspended", "action required"
-   - **Financial Keywords**: "invoice", "refund", "payment", "transaction"
-   - **Security Keywords**: "unauthorized", "detected", "security alert"
+### Smart Detection
+- **Character-based Recognition**: Unicode pattern matching
+- **Context Analysis**: Multiple keyword categories required
+- **Obfuscation Handling**: Leetspeak, special characters, URL encoding
 
-4. **Brand Protection**
-   - Monitors 6+ major brands (PayPal, Google, Microsoft, Amazon, Netflix, Apple)
-   - Detects brand name misuse in unauthorized domains
-   - Visual similarity detection for typosquatting
+## 🛡️ Security Features
 
-### Scoring System
+- **Local Processing**: All analysis happens locally on your machine
+- **Privacy Protection**: No email data sent to external services
+- **Real-time Updates**: Threat databases updated automatically
+- **Visual Warnings**: Clear indicators for malicious content
 
-- **0-69**: Safe (Green)
-- **70-100**: Phishing (Red)
-- Individual threats can add 20-100 points each
-- Maximum score capped at 100
+## 📈 Extension Features
 
-### Backend Architecture
-
-1. **Flask Server**: RESTful API on port 5001
-2. **SQLite Database**: Local threat intelligence cache
-3. **GitHub Integration**: Auto-updates from phishing databases
-4. **Real-time Processing**: Sub-second analysis times
-
-### Extension Integration
-
-1. **Content Script**: Injects scan button into Gmail interface
-2. **Background Service**: Handles API communication
-3. **Enhanced Visual Alerts**: 
-   - Large score display (0-100 points)
-   - Color-coded alerts (🟢 Safe / 🟡 Caution / 🔴 Danger)
-   - Auto-dismiss countdown (8 seconds)
-   - Malicious URL highlighting
-4. **Advanced Popup Dashboard**:
-   - Average risk score with progress bar
-   - Real-time scan history chart
-   - Enhanced status indicators
-   - Theme support (Light/Dark)
-5. **Statistics Tracking**: Maintains scan and threat counts
-
-## New UI Features
-
-### Enhanced Email Alerts
+### Email Alerts
 - **Score Display**: Large 24px font showing 0-100 risk score
-- **Color Coding**: 
-  - 🟢 Green (0-29): Safe emails
-  - 🟡 Yellow (30-69): Suspicious emails  
-  - 🔴 Red (70-100): Phishing emails
+- **Color Coding**: Green/Yellow/Red based on threat level
 - **Auto-Dismiss**: Alerts disappear after 8 seconds
 - **Click to Dismiss**: Users can close alerts immediately
 - **Malicious URLs**: Highlighted in red with full URL display
-- **Language Detection**: Shows detected language (en, zh, ar, ru, es)
-- **Enhanced Readability**: Technical terms simplified for users
+- **Language Detection**: Shows detected language
 
-### Advanced Popup Dashboard
-- **Average Risk Score**: Running average of all scan scores
-- **Progress Bar**: Visual representation with color coding
+### Popup Dashboard
+- **System Health**: Backend connection status
+- **Average Risk Score**: Running average with progress bar
+- **Statistics**: Email scan count and threats blocked
 - **Real-time Chart**: Line graph showing last 10 scan scores
-- **Enhanced Icons**: Better emoji support and visual indicators
-- **Responsive Design**: Wider popup (380px) for better chart display
+- **Theme Support**: Light/dark mode toggle
+- **Manual Refresh**: On-demand data updates
 
-## Multilingual Support
+## 🔍 Advanced Detection
 
-### Language Detection
-- **English**: Full keyword coverage
-- **Chinese (中文)**: Urgency, financial, security keywords
-- **Arabic (العربية)**: Comprehensive Arabic keyword detection
-- **Russian (Русский)**: Cyrillic script support
-- **Spanish (Español)**: Latin American Spanish keywords
-- **French (Français)**: Complete French keyword detection
-- **Auto-Detection**: Automatically identifies email language
-
-### Enhanced Detection Capabilities
-- **Balanced Scoring**: Conservative approach to reduce false positives
-- **Smart Language Detection**: Character-based recognition (not word-based)
-- **Obfuscation Detection**: Leetspeak, special characters, URL encoding
-- **Pattern Recognition**: URL shorteners (penalize multiple), IP addresses, suspicious ports
-- **Advanced Linguistics**: Context-aware keyword analysis (multiple categories required)
-- **UTF-8 Support**: Proper Unicode character handling
-- **Sender Analysis**: Suspicious domain patterns, IP address checking
+### Pattern Recognition
+- **URL Shorteners**: Multiple shortener detection
+- **IP Address URLs**: Direct IP linking detection
+- **Non-standard Ports**: Suspicious port identification
+- **Sender Analysis**: Domain pattern checking
 - **Attachment Analysis**: Multiple attachment detection
-- **Metadata Collection**: Sender info, attachment count, hidden links
 
-## Security Features
+### Brand Protection
+- **6+ Major Brands**: PayPal, Google, Microsoft, Amazon, Netflix, Apple
+- **Visual Similarity**: Typosquatting detection
+- **Domain Patterns**: Suspicious subdomain identification
+- **Sender Impersonation**: Email domain verification
 
-- **Local Processing**: All analysis happens locally on your machine
-- **Privacy**: No email data is sent to external services
-- **Real-time Updates**: Threat databases are updated automatically
-- **Visual Warnings**: Clear indicators for malicious content
+## 🛠️ Development
 
-## Troubleshooting
+### Project Structure
+```
+PhishDetector Pro/
+├── README.md              # This file
+├── requirements.txt       # Python dependencies
+├── start_backend.bat      # Windows startup script
+├── back/                 # Flask backend
+│   ├── app.py           # Main Flask application
+│   ├── analyzer.py      # Analysis engine
+│   ├── config.py        # Configuration
+│   ├── db_manager.py    # Database management
+│   ├── threat_intel.py  # Threat intelligence
+│   └── phish_cache.db   # SQLite database
+├── extension/            # Chrome extension
+│   ├── manifest.json    # Extension manifest
+│   ├── background.js    # Service worker
+│   ├── content.js       # Gmail integration
+│   ├── popup.html       # Popup UI
+│   └── popup.js         # Popup functionality
 
-- **Backend Offline**: Make sure the Flask server is running on port 5001
-- **Extension Not Working**: Check Chrome developer console for errors
-- **Port Conflicts**: Change port in `simple_app.py` if 5001 is in use
+```
 
-## Development
-
-To run the full system with debug mode:
-1. Start the backend: `cd back && python simple_app.py`
+### Running in Development
+1. Start the backend: `cd back && python app.py`
 2. Load the extension in Chrome developer mode
 3. Open Gmail and test with sample phishing emails
+
+### Testing
+```bash
+# Test basic functionality
+python -c "import requests; print(requests.get('http://127.0.0.1:5001/test').json())"
+
+# Test phishing detection
+python -c "
+import requests
+r = requests.post('http://127.0.0.1:5001/analyze', json={
+    'body': 'Urgent: verify your paypal account now',
+    'links': [{'href': 'http://paypa1.com', 'text': 'paypal.com'}]
+})
+print(r.json())
+"
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+- **Backend Offline**: Make sure the Flask server is running on port 5001
+- **Extension Not Working**: Check Chrome developer console for errors
+- **Port Conflicts**: Change port in `app.py` if 5001 is in use
+- **Data Not Showing**: Use the refresh button in popup dashboard
+
+### Debug Mode
+The backend runs in debug mode by default. Check the console for detailed error messages.
+
+## 📝 Updates
+
+### Recent Changes
+- **Modular Architecture**: Split monolithic app into separate `app.py` and `analyzer.py`
+- **Improved Popup**: Fixed data display issues and added refresh functionality
+- **Enhanced Detection**: Improved multilingual support and obfuscation detection
+- **Better UI**: Color-coded alerts and real-time chart updates
+
+### Version History
+- **v3.1**: Modular architecture, improved popup UI
+- **v3.0**: Multilingual support, advanced obfuscation detection
+- **v2.0**: Enhanced UI with charts and statistics
+- **v1.0**: Basic phishing detection
+
+## 📄 License
+
+This project is for educational and research purposes. Use responsibly and in accordance with applicable laws and regulations.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please ensure all tests pass and follow the existing code style.
+
+---
+
+**PhishDetector Pro** - Advanced phishing protection for Gmail 🛡️
