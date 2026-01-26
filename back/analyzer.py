@@ -1,291 +1,494 @@
 import re
 import math
+import concurrent.futures
+import hashlib
+import time
 from urllib.parse import urlparse
 from difflib import SequenceMatcher
-import unicodedata
-
 from config import Config
 from db_manager import db
 from threat_intel import ThreatIntel
 
 class PhishingAnalyzer:
+    def __init__(self):
+        self.cache = {}
+        self.link_cache = {}
+
+    def _get_content_hash(self, body, sender, link_count):
+        """Create hash for content-based caching"""
+        # Include more context for better cache hits but avoid over-caching
+        content = f"{body[:200]}{sender}{link_count}"  # Reduced to 200 chars for more variation
+        return hashlib.md5(content.encode()).hexdigest()
+
+    def _analyze_linguistic_patterns(self, body_clean):
+        """Advanced linguistic analysis inspired by Microsoft/Proofpoint techniques"""
+        score = 0
+        reasons = []
+        
+        # 1. BEC-style linguistic patterns (Microsoft approach)
+        bec_patterns = [
+            # Authority and urgency combinations
+            (r'\b(urgent|immediate|asap)\b.*\b(payment|transfer|invoice|wire)\b', 25, "BEC urgency + financial"),
+            (r'\b(ceo|cfo|director|manager)\b.*\b(request|need|require)\b', 20, "Executive impersonation"),
+            
+            # Unusual request patterns
+            (r'\b(gift card|purchase|buy)\b.*\b(quickly|urgent|asap)\b', 25, "Urgent purchase request"),
+            (r'\b(confidential|secret|private)\b.*\b(document|file|information)\b', 15, "Information request"),
+            
+            # Conversation manipulation
+            (r'\b(can you|could you)\b.*\b(quickly|now|asap)\b', 15, "Manipulative request"),
+            (r'\b(only you|trust you)\b.*\b(help|assist)\b', 20, "Trust exploitation"),
+        ]
+        
+        # 2. Sophisticated social engineering (Proofpoint approach)
+        social_patterns = [
+            # Professional context abuse
+            (r'\b(client|customer|vendor)\b.*\b(issue|problem|emergency)\b', 20, "Business context abuse"),
+            (r'\b(account|verification|security)\b.*\b(update|confirm|verify)\b', 25, "Security impersonation"),
+            
+            # Time pressure tactics
+            (r'\b(closing|end of day|today)\b.*\b(need|require|must)\b', 20, "Time pressure"),
+            (r'\b(weekend|after hours|urgent)\b.*\b(response|reply)\b', 15, "Off-hours pressure"),
+        ]
+        
+        # 3. Advanced scam indicators (Industry best practices)
+        advanced_patterns = [
+            # Technical sophistication
+            (r'\b(blockchain|cryptocurrency|bitcoin|ethereum)\b.*\b(invest|opportunity|profit)\b', 30, "Crypto investment scam"),
+            (r'\b(artificial intelligence|ai|machine learning)\b.*\b(trading|profit|return)\b', 25, "AI trading scam"),
+            
+            # Emotional manipulation
+            (r'\b(congratulations|winner|selected)\b.*\b(exclusive|special|vip)\b', 25, "Emotional manipulation"),
+            (r'\b(limited|exclusive|only)\b.*\b(available|spots|time)\b', 20, "Artificial scarcity"),
+        ]
+        
+        # Check all patterns
+        all_patterns = bec_patterns + social_patterns + advanced_patterns
+        for pattern, points, reason in all_patterns:
+            if re.search(pattern, body_clean, re.IGNORECASE):
+                score += points
+                reasons.append(reason)
+        
+        return score, reasons
+
+    def _analyze_semantic_anomalies(self, body_clean, sender):
+        """Next-gen semantic analysis that goes beyond industry standards"""
+        score = 0
+        reasons = []
+        
+        # 1. CONVERSATIONAL ANOMALY DETECTION (Beyond Microsoft)
+        conversation_patterns = [
+            # Unusual greeting patterns
+            (r'^(hi|hello|dear)\s+[a-z]+\s*[,\.!?]\s*i\s+hope', 20, "Generic greeting + hope (scam template)"),
+            (r'^(dear\s+(friend|colleague|customer))', 25, "Impersonal formal greeting"),
+            
+            # Sudden relationship establishment
+            (r'(my\s+friend|my\s+colleague|my\s+partner)', 15, "Fake relationship claim"),
+            (r'(trust\s+me|believe\s+me|i\s+need\s+your\s+help)', 20, "Trust manipulation"),
+            
+            # Abnormal politeness (overcompensation)
+            (r'(respectfully|cordially|best\s+regards)\s+(immediately|urgent|asap)', 25, "Urgent politeness mismatch"),
+        ]
+        
+        # 2. PSYCHOLOGICAL TRIGGER ANALYSIS (Beyond Proofpoint)
+        psychological_patterns = [
+            # Authority escalation
+            (r'(ceo|director|manager|president)\s+(said|requested|ordered)', 30, "False authority escalation"),
+            (r'(legal|attorney|court)\s+(action|notice|subpoena)', 35, "Legal intimidation"),
+            
+            # Fear/Urgency amplification
+            (r'(account\s+will\s+be|will\s+be)\s+(suspended|closed|terminated)', 30, "Account threat escalation"),
+            (r'(immediate\s+action|required|respond\s+immediately|urgent\s+response)', 25, "Amplified urgency"),
+            
+            # Social proof manipulation
+            (r'(everyone\s+is|thousands\s+of|many\s+people)\s+(already|joining|participating)', 20, "Fake social proof"),
+            (r'(limited\s+to\s+(only|just)\s+\d+\s+(spots|people|places))', 25, "Artificial scarcity specificity"),
+        ]
+        
+        # 3. LINGUISTIC FINGERPRINT ANALYSIS (Proprietary technique)
+        linguistic_red_flags = [
+            # Non-native writing patterns (common in scams)
+            (r'\b(am|is|are)\s+(currently|presently|presently)\s+(working|processing)', 15, "Non-native temporal phrasing"),
+            (r'\b(we\s+are\s+(writing|contacting)\s+you\s+to)', 20, "Formal scam template pattern"),
+            
+            # Overly complex/simple language mismatch
+            (r'(kindly|please)\s+(do\s+not\s+hesitate|feel\s+free)\s+to\s+contact', 15, "Template customer service language"),
+            
+            # Emotional manipulation markers
+            (r'(don\'t\s+miss|can\'t\s+miss|won\'t\s+find)\s+(this\s+opportunity|chance|offer)', 25, "Opportunity pressure"),
+        ]
+        
+        # 4. SENDER-BEHAVIOR CORRELATION (Advanced local analysis)
+        sender_analysis = self._analyze_sender_behavior(body_clean, sender)
+        score += sender_analysis['score']
+        reasons.extend(sender_analysis['reasons'])
+        
+        # Check all patterns
+        all_patterns = conversation_patterns + psychological_patterns + linguistic_red_flags
+        for pattern, points, reason in all_patterns:
+            if re.search(pattern, body_clean, re.IGNORECASE):
+                score += points
+                reasons.append(reason)
+        
+        return score, reasons
+
+    def _analyze_sender_behavior(self, body_clean, sender):
+        """Analyze sender behavior patterns locally"""
+        score = 0
+        reasons = []
+        
+        # Domain analysis for behavioral patterns
+        if sender and '@' in sender:
+            domain = sender.split('@')[1].lower()
+            
+            # Suspicious domain patterns
+            if any(pattern in domain for pattern in ['secure', 'verify', 'safety', 'protect', 'alert']):
+                if domain not in ['microsoft.com', 'google.com', 'apple.com']:
+                    score += 25
+                    reasons.append("Suspicious security-themed domain")
+            
+            # Recent domain registration patterns (approximate)
+            if len(domain) > 20 and any(char.isdigit() for char in domain):
+                score += 15
+                reasons.append("Potentially auto-generated domain")
+            
+            # Free email provider abuse
+            free_providers = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com']
+            if domain in free_providers:
+                # Check for business language from personal email
+                if any(word in body_clean for word in ['company', 'business', 'corporate', 'enterprise']):
+                    score += 20
+                    reasons.append("Business language from personal email")
+        
+        return {'score': score, 'reasons': reasons}
+
+    def _analyze_contextual_anomalies(self, body_clean, sender):
+        """Contextual anomaly detection beyond industry standards"""
+        score = 0
+        reasons = []
+        
+        # 1. TIME-BASED ANOMALIES
+        time_patterns = [
+            (r'(immediately|urgently|asap|right\s+now)\s+(before\s+(today|tomorrow|monday|tuesday))', 20, "Impossible time constraint"),
+            (r'(within\s+(the\s+next\s+hour|30\s+minutes|1\s+hour))', 25, "Unrealistic deadline"),
+        ]
+        
+        # 2. FINANCIAL ANOMALY PATTERNS
+        financial_anomalies = [
+            (r'\$\d+(,\d{3})*(.\d{2})?\s+(only|just|mere)', 20, "Odd pricing language"),
+            (r'(100%\s+(guaranteed|sure|certain|safe))', 30, "Impossible guarantee"),
+            (r'(no\s+risk|risk\s+free|zero\s+risk)', 25, "Risk denial pattern"),
+        ]
+        
+        # 3. TECHNICAL SOPHISTICATION RED FLAGS
+        tech_patterns = [
+            (r'(proprietary|exclusive|secret)\s+(algorithm|system|technology)', 25, "Fake technical exclusivity"),
+            (r'(patented|trademarked)\s+(trading|investment|profit)\s+(system|method)', 30, "Fake technical claims"),
+        ]
+        
+        # Check all contextual patterns
+        all_patterns = time_patterns + financial_anomalies + tech_patterns
+        for pattern, points, reason in all_patterns:
+            if re.search(pattern, body_clean, re.IGNORECASE):
+                score += points
+                reasons.append(reason)
+        
+        return score, reasons
+
+    def _fast_text_analysis(self, body_clean):
+        """Ultra-fast text analysis with sophisticated scam detection"""
+        # Detect language and get appropriate word list
+        urgency_words = []
+        
+        # Check for French keywords first
+        french_keywords = ['urgent', 'vérifier', 'compte', 'suspendu', 'connexion', 'action requise']
+        if any(word in body_clean for word in french_keywords):
+            urgency_words.extend(french_keywords)
+        
+        # Always include English keywords
+        english_keywords = ['urgent', 'verify', 'account', 'password', 'suspended', 'action required', 'login']
+        urgency_words.extend(english_keywords)
+        
+        # Basic financial scam keywords
+        basic_scam_keywords = [
+            'exclusive task', 'multiply your earnings', 'guaranteed profit', 'earn $', 
+            'crypto offers', 'limited time', 'start today', 'walk away with', 
+            'profit', 'earnings', 'bonus', 'reward', 'investment', 'quick profit',
+            'easy cash', 'cash earnings', 'make money', 'click here', 'click now',
+            'instant cash', 'quick cash', 'easy money', 'fast money', 'get paid',
+            'cash prize', 'win money', 'free money', 'earn extra', 'side income',
+            'work from home', 'be your own boss', 'financial freedom', 'passive income'
+        ]
+        
+        # SOPHISTICATED SCAM PATTERNS
+        sophisticated_patterns = [
+            # Authority/Impersonation patterns
+            'security alert', 'account verification', 'confirm your identity',
+            'suspicious activity', 'unusual login', 'protect your account',
+            'verification required', 'identity verification', 'document verification',
+            
+            # Emotional manipulation
+            'last chance', 'don\'t miss out', 'act now', 'limited spots',
+            'only available', 'exclusive access', 'vip invitation', 'special invitation',
+            'congratulations you won', 'you have been selected', 'chosen winner',
+            
+            # Technical sophistication
+            'blockchain technology', 'smart contract', 'decentralized', 'cryptocurrency',
+            'nft collection', 'digital wallet', 'metaverse', 'web3', 'token sale',
+            
+            # Investment sophistication
+            'high yield', 'passive income', 'automated trading', 'ai trading',
+            'algorithmic trading', 'market analysis', 'investment opportunity',
+            'roi guaranteed', 'fixed returns', 'wealth management',
+            
+            # Social engineering
+            'colleague recommended', 'friend referral', 'network invitation',
+            'professional network', 'business opportunity', 'partnership program',
+            'affiliate program', 'commission based', 'revenue sharing'
+        ]
+        
+        # NEW: Advanced linguistic pattern analysis
+        ling_score, ling_reasons = self._analyze_linguistic_patterns(body_clean)
+        
+        # Remove duplicates and count
+        urgency_words = list(set(urgency_words))
+        urgent_count = sum(1 for word in urgency_words if word in body_clean)
+        basic_scam_count = sum(1 for word in basic_scam_keywords if word in body_clean)
+        sophisticated_count = sum(1 for word in sophisticated_patterns if word in body_clean)
+        
+        # Weighted scoring: sophisticated scams get higher points
+        # NEW: Add volume-based scoring for better correlation with frontend
+        volume_multiplier = max(1.0, (urgent_count + basic_scam_count) / 5.0)  # Boost score for high volumes
+        total_score = ling_score + (urgent_count * 10) + (basic_scam_count * 12) + (sophisticated_count * 15)
+        total_score = int(total_score * volume_multiplier)  # Apply volume multiplier
+        
+        # Generate specific reasons
+        reasons = ling_reasons.copy()
+        if urgent_count > 0:
+            reasons.append(f"Urgency tactics detected ({urgent_count} indicators)")
+        if basic_scam_count > 2:
+            reasons.append(f"Basic scam language ({basic_scam_count} indicators)")
+        if sophisticated_count > 0:
+            reasons.append(f"Sophisticated scam patterns ({sophisticated_count} indicators)")
+        
+        # NEW: Add volume warning for high suspicious line counts
+        if (urgent_count + basic_scam_count) > 10:
+            reasons.append(f"High volume of suspicious indicators ({urgent_count + basic_scam_count} total)")
+        
+        if total_score == 0:
+            return 0, []
+        elif total_score <= 25:
+            return total_score, reasons or ["Mild promotional language"]
+        elif total_score <= 45:
+            return total_score, reasons or ["Suspicious promotional content"]
+        elif total_score <= 65:
+            return total_score, reasons or ["High-risk promotional or scam content"]
+        else:
+            return min(total_score, 90), reasons or ["Advanced scam tactics detected"]
+
     def _calculate_entropy(self, text):
         if not text: return 0
         counts = {c: text.count(c) for c in set(text)}
         return -sum((count/len(text)) * math.log2(count/len(text)) for count in counts.values())
 
-    def _check_typosquatting(self, domain):
+    def _check_brand_squatting(self, domain):
         score, reasons = 0, []
         domain_name = domain.split('.')[0]
         for brand, official in Config.PROTECTED_BRANDS.items():
             if brand in domain and official not in domain:
                 score += 70
                 reasons.append(f"Brand Impersonation: '{brand}' in unauthorized domain")
-            
             similarity = SequenceMatcher(None, brand, domain_name).ratio()
             if 0.85 <= similarity < 1.0:
-                score += 85
-                reasons.append(f"Visual Spoofing: Domain is suspiciously similar to {official}")
+                score += 80
+                reasons.append(f"Visual Spoofing: {domain} is too similar to {official}")
         return score, reasons
 
-    def _detect_language(self, text):
-        """Detect the primary language of the text"""
-        try:
-            # Normalize text for language detection
-            clean_text = re.sub(r'[\u0000-\u001F\u007F-\u009F]', '', text)
+    def _analyze_link(self, link):
+        """Analyze a single link - optimized for newsletters and legitimate content"""
+        href = link.get('href', '').lower().strip()
+        
+        # Skip invalid or empty links
+        if not href or not href.startswith(('http://', 'https://')):
+            return 0, [], None
             
-            # Simple language detection based on character patterns
-            if re.search(r'[\u4e00-\u9fff]', clean_text):  # Chinese
-                return 'zh'
-            elif re.search(r'[\u0600-\u06FF]', clean_text):  # Arabic
-                return 'ar'
-            elif re.search(r'[\u0400-\u04FF]', clean_text):  # Cyrillic
-                return 'ru'
-            elif re.search(r'[\u0590-\u05FF]', clean_text):  # Hebrew
-                return 'he'
-            elif re.search(r'[\u0900-\u097F]', clean_text):  # Hindi
-                return 'hi'
-            elif re.search(r'[\u0E00-\u0E7F]', clean_text):  # Thai
-                return 'th'
-            # French detection - look for French-specific characters and patterns
-            elif re.search(r'[àâäçéèêëïîôöùûüÿ]', clean_text):  # French accents
-                return 'fr'
-            else:
-                return 'en'  # Default to English
-        except:
-            return 'en'
-
-    def _get_multilingual_keywords(self, language):
-        """Get phishing keywords for different languages"""
-        keywords = {
-            'en': {
-                'urgency': ['urgent', 'verify', 'suspended', 'action required', 'immediate', 'critical', 'alert', 'warning'],
-                'financial': ['invoice', 'refund', 'payment', 'transaction', 'credits', 'billing', 'account'],
-                'security': ['unauthorized', 'detected', 'security alert', 'compromised', 'breach', 'suspicious']
-            },
-            'zh': {
-                'urgency': ['紧急', '验证', '暂停', '立即', '重要', '警告'],
-                'financial': ['发票', '退款', '付款', '交易', '账户', '账单'],
-                'security': ['未经授权', '检测到', '安全警报', '泄露', '可疑']
-            },
-            'ar': {
-                'urgency': ['عاجل', 'تحقق', 'معلق', 'فوري', 'حرج', 'إنذار'],
-                'financial': ['فاتورة', 'استرداد', 'دفع', 'معاملة', 'حساب'],
-                'security': ['غير مصرح', 'تم الكشف', 'تنبيه أمني', 'اختراق', 'مشبوه']
-            },
-            'ru': {
-                'urgency': ['срочно', 'проверить', 'приостановлен', 'немедленно', 'критический', 'предупреждение'],
-                'financial': ['счет', 'возврат', 'оплата', 'транзакция', 'аккаунт', 'выставление счета'],
-                'security': ['несанкционированный', 'обнаружено', 'предупреждение безопасности', 'скомпрометирован', 'подозрительный']
-            },
-            'es': {
-                'urgency': ['urgente', 'verificar', 'suspendido', 'inmediato', 'crítico', 'alerta'],
-                'financial': ['factura', 'reembolso', 'pago', 'transacción', 'créditos', 'cuenta'],
-                'security': ['no autorizado', 'detectado', 'alerta de seguridad', 'comprometido', 'sospechoso']
-            },
-            'fr': {
-                'urgency': ['urgent', 'vérifier', 'suspendu', 'action requise', 'immédiat', 'critique', 'alerte', 'attention'],
-                'financial': ['facture', 'remboursement', 'paiement', 'transaction', 'crédit', 'facturation', 'compte'],
-                'security': ['non autorisé', 'détecté', 'alerte de sécurité', 'compromis', 'suspect', 'piratage']
-            }
-        }
-        return keywords.get(language, keywords['en'])
-
-    def _check_obfuscation(self, text):
-        """Check for text obfuscation techniques"""
-        score, reasons = 0, []
+        domain = urlparse(href).netloc
+        score, reasons, malicious = 0, [], False
         
-        # Check for excessive special characters
-        special_char_ratio = len(re.findall(r'[^a-zA-Z0-9\s]', text)) / max(len(text), 1)
-        if special_char_ratio > 0.3:
-            score += 25
-            reasons.append("High ratio of special characters (obfuscation technique)")
+        # Fast skip for trusted domains (major speed boost for newsletters)
+        if any(trusted in domain for trusted in Config.TRUSTED_DOMAINS):
+            return 0, [], None
         
-        # Check for URL encoding
-        if re.search(r'%[0-9A-Fa-f]{2}', text):
+        # Fast Local DB Check (quickest check first)
+        if db.check_threat(domain) > 0:
+            score += 100
+            reasons.append(f"Blacklisted domain: {domain}")
+            malicious = True
+        
+        # Brand Squatting & TLD Check (local, fast)
+        s_score, s_reasons = self._check_brand_squatting(domain)
+        score += s_score
+        reasons.extend(s_reasons)
+        
+        if any(domain.endswith(tld) for tld in Config.DANGEROUS_TLDS):
             score += 30
-            reasons.append("URL encoding detected (possible obfuscation)")
+            reasons.append(f"Suspicious TLD detected ({domain})")
         
-        # Check for excessive whitespace
-        if re.search(r'\s{5,}', text):
-            score += 15
-            reasons.append("Excessive whitespace (obfuscation technique)")
+        # External Threat Intelligence (slowest, last - only if suspicious)
+        if score >= 30 or malicious:  # Only check if already somewhat suspicious
+            threat_status, threat_score = ThreatIntel.get_dangerosity(href)
+            if threat_score > 0:
+                score += threat_score
+                reasons.append(f"Threat Intelligence: {threat_status} ({href})")
+                if threat_score >= 100:
+                    malicious = True
         
-        # Check for character substitution (leetspeak)
-        leet_patterns = [('4', 'a'), ('3', 'e'), ('1', 'i'), ('0', 'o'), ('7', 't'), ('5', 's')]
-        leet_count = sum(text.lower().count(pattern) for pattern, _ in leet_patterns)
-        if leet_count > 2:
-            score += 20
-            reasons.append("Leetspeak detected (character substitution)")
-        
-        return score, reasons
+        return score, reasons, href if malicious else None
 
-    def _check_suspicious_patterns(self, text, links):
-        """Check for suspicious patterns in email content"""
-        score, reasons = 0, []
+    def analyze(self, body, links=None, metadata=None, sender='', debug_mode=False):
+        # DEBUG MODE: Skip caching for testing
+        if not debug_mode:
+            # ULTRA-FAST: Content-based caching
+            content_hash = self._get_content_hash(body, sender, len(links or []))
+            if content_hash in self.cache:
+                cached_result = self.cache[content_hash]
+                if time.time() - cached_result['timestamp'] < 300:  # 5 minute cache
+                    return cached_result['result']
         
-        # Check for shortened URLs - but be less aggressive
-        shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd']
-        shortener_count = 0
-        for link in links:
-            href = link.get('href', '').lower()
-            if any(shortener in href for shortener in shorteners):
-                shortener_count += 1
-        
-        # Only penalize if multiple shortened URLs
-        if shortener_count >= 2:
-            score += 30
-            reasons.append(f"Multiple URL shorteners detected ({shortener_count})")
-        elif shortener_count == 1:
-            score += 10  # Minor penalty for single shortener
-            reasons.append("URL shortener detected")
-        
-        # Check for IP address URLs - more specific pattern
-        ip_pattern = r'https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}($|/)'
-        if re.search(ip_pattern, str(links)):
-            score += 50
-            reasons.append("Direct IP address URL detected")
-        
-        # Check for non-standard ports - only high ports
-        for link in links:
-            href = link.get('href', '')
-            if re.search(r':(8080|3000|8000|9000|4444|5555)\b', href):
-                score += 25
-                reasons.append(f"Suspicious port in URL: {href}")
-        
-        # Check for excessive urgency - higher threshold
-        urgency_indicators = ['!!', '!!!', 'urgent', 'immediate', 'asap', 'now']
-        urgency_count = sum(text.lower().count(indicator) for indicator in urgency_indicators)
-        if urgency_count >= 4:  # Increased from 3
-            score += 25  # Reduced from 35
-            reasons.append("Excessive urgency indicators detected")
-        
-        return score, reasons
-
-    def analyze(self, body, links=None, metadata=None):
         score, reasons, malicious_urls = 0, [], []
         body_clean = re.sub(r'<[^>]+>', ' ', body).lower()
         metadata = metadata or {}
 
-        # Detect language for multilingual analysis
-        language = self._detect_language(body)
-        
-        # 1. Structural Checks (Invisible link/Image-only)
-        if metadata.get('hasHiddenLinks'):
+        # FEATURE: User Reputation Logic (early exit)
+        if metadata.get('isTrusted'):
+            return {"phishing": False, "score": 0, "reasons": ["Verified by User (Trusted List)"], "malicious_urls": []}
+        if metadata.get('isReported'):
             score += 100
-            reasons.append("Invisible link overlay detected (High-Certainty)")
+            reasons.append("Sender previously Reported as Malicious by you")
 
-        if metadata.get('imageCount', 0) > 0 and metadata.get('textLength', 0) < 50:
-            score += 50
-            reasons.append("Image-heavy email with low text (Phishing Bypass method)")
-
-        # 2. Enhanced Pattern Analysis
-        obf_score, obf_reasons = self._check_obfuscation(body_clean)
-        score += obf_score
-        reasons.extend(obf_reasons)
-        
-        pattern_score, pattern_reasons = self._check_suspicious_patterns(body_clean, links)
-        score += pattern_score
-        reasons.extend(pattern_reasons)
-
-        # 3. Link Analysis (Cached & Multi-layered)
-        for link in links or []:
-            href = link.get('href', '').lower()
-            text = link.get('text', '').lower()
-            domain = urlparse(href).netloc
-
-            # A. Check Local Database (Instant)
-            threat_level = db.check_threat(domain)
-            if threat_level >= 70:
-                score += 100
-                reasons.append(f"Blacklisted Domain: {domain}")
-                malicious_urls.append(href)
-                continue
-
-            # B. Check Deceptive Text (href != display text)
-            if ('.com' in text or 'www' in text) and domain and domain not in text:
-                score += 100
-                reasons.append(f"Masked URL: Display text is '{text}' but links to '{domain}'")
-                malicious_urls.append(href)
-
-            # C. Typosquatting & Entropy
-            t_score, t_reasons = self._check_typosquatting(domain)
-            score += t_score
-            reasons.extend(t_reasons)
+        # SMART: Fast path for legitimate newsletters but still verify links
+        is_trusted_sender = False
+        if sender:
+            sender_domain = sender.split('@')[-1].lower() if '@' in sender else sender.lower()
+            is_trusted_sender = any(trusted in sender_domain for trusted in Config.TRUSTED_SENDERS)
             
-            if self._calculate_entropy(domain) > 4.2:
-                score += 30
-                reasons.append(f"Suspicious high-entropy domain: {domain}")
+            if is_trusted_sender:
+                # For trusted senders, reduce suspicion threshold but still analyze
+                trusted_score_boost = -20  # Give benefit of doubt
+            else:
+                trusted_score_boost = 0
+        else:
+            trusted_score_boost = 0
 
-        # 4. Multilingual Linguistic Check
-        keywords = self._get_multilingual_keywords(language)
-        hits = []
-        for category, words in keywords.items():
-            for word in words:
-                if word in body_clean:
-                    hits.append(f"{category}:{word}")
-        
-        if hits:
-            # More conservative scoring for linguistic indicators
-            unique_categories = len(set(hit.split(':')[0] for hit in hits))
-            word_count = len(hits)
+        # 1. Image-to-Text Ratio (fast check)
+        if metadata.get('imageCount', 0) >= 1 and metadata.get('textLength', 0) < 60:
+            score += 40
+            reasons.append("High image-to-text ratio (Common filter bypass)")
+
+        # 2. SUPER-OPTIMIZED Link Analysis
+        if links:
+            # Pre-filter and deduplicate links
+            seen_domains = set()
+            valid_links = []
+            for link in links[:10]:  # Reduced to 10 for speed
+                href = link.get('href', '').lower().strip()
+                if href and href.startswith(('http://', 'https://')):
+                    domain = urlparse(href).netloc
+                    if domain not in seen_domains:
+                        seen_domains.add(domain)
+                        valid_links.append(link)
             
-            # Only score if multiple categories OR multiple words
-            if unique_categories >= 2 or word_count >= 3:
-                linguistic_score = min(unique_categories * 15 + word_count * 5, 50)  # Reduced scoring
-                score += linguistic_score
+            if valid_links:
+                # Check cache first for link analysis
+                cached_link_results = []
+                uncached_links = []
                 
-                # Show detected keywords in results
-                detected_keywords = [hit.split(':')[1] for hit in hits[:5]]  # Show first 5
-                reasons.append(f"Suspicious keywords ({language}): {', '.join(detected_keywords)}")
+                for link in valid_links:
+                    href = link.get('href', '')
+                    if href in self.link_cache:
+                        cached_link_results.append(self.link_cache[href])
+                    else:
+                        uncached_links.append(link)
+                
+                # Process cached results immediately
+                for cached_result in cached_link_results:
+                    score += cached_result['score']
+                    reasons.extend(cached_result['reasons'])
+                    if cached_result['malicious_url']:
+                        malicious_urls.append(cached_result['malicious_url'])
+                
+                # Process uncached links with limited concurrency
+                if uncached_links:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:  # Reduced workers
+                        future_to_link = {executor.submit(self._analyze_link, link): link for link in uncached_links}
+                        
+                        for future in concurrent.futures.as_completed(future_to_link, timeout=3):  # Faster timeout
+                            try:
+                                link_score, link_reasons, malicious_url = future.result()
+                                href = future_to_link[future].get('href', '')
+                                
+                                # Cache the result
+                                self.link_cache[href] = {
+                                    'score': link_score,
+                                    'reasons': link_reasons,
+                                    'malicious_url': malicious_url,
+                                    'timestamp': time.time()
+                                }
+                                
+                                score += link_score
+                                reasons.extend(link_reasons)
+                                if malicious_url:
+                                    malicious_urls.append(malicious_url)
+                                
+                                # Early exit if already high risk
+                                if score >= 100:
+                                    break
+                            except Exception:
+                                continue
 
-        # 5. Additional Advanced Checks
-        # Check for sender impersonation - be more specific
-        if metadata.get('sender'):
-            sender = metadata.get('sender', '').lower()
-            sender_domain = sender.split('@')[-1] if '@' in sender else ''
+        # 3. NEXT-GEN TEXT ANALYSIS (Beyond industry standards)
+        if score < 70:  # Only check if not already suspicious
+            # Industry-standard analysis
+            text_score, text_reasons = self._fast_text_analysis(body_clean)
+            score += text_score
+            reasons.extend(text_reasons)
             
-            # Only flag if sender domain is suspicious
-            for brand, official in Config.PROTECTED_BRANDS.items():
-                if brand in sender_domain and sender_domain != official:
-                    # Check if it's a known suspicious pattern
-                    suspicious_patterns = [f'{brand}-security', f'{brand}-verify', f'{brand}-login', f'secure-{brand}']
-                    if any(pattern in sender_domain for pattern in suspicious_patterns):
-                        score += 30  # Reduced from 40
-                        reasons.append(f"Suspicious sender domain: {sender_domain}")
-                        break
-        
-        # Check sender IP if available
-        if metadata.get('senderIP'):
-            sender_ip = metadata.get('senderIP')
-            # Check if it's a private IP or suspicious
-            if sender_ip.startswith('192.168.') or sender_ip.startswith('10.') or sender_ip.startswith('172.16.'):
-                score += 20
-                reasons.append("Sender from private network range")
-        
-        # Check for attachment threats - only if suspicious
-        if metadata.get('hasAttachments') and metadata.get('attachmentCount', 0) > 3:
-            score += 15  # Reduced from 20
-            reasons.append("Multiple attachments detected")
-        
-        # Check for encoding anomalies - be less sensitive
-        try:
-            body.encode('ascii')
-        except UnicodeEncodeError:
-            # Only penalize if excessive non-ASCII
-            non_ascii_ratio = sum(1 for c in body if ord(c) > 127) / len(body)
-            if non_ascii_ratio > 0.3:  # Only if >30% non-ASCII
-                score += 10  # Reduced from 15
-                reasons.append("High non-ASCII character content")
+            # NEXT-GEN: Semantic anomaly detection
+            semantic_score, semantic_reasons = self._analyze_semantic_anomalies(body_clean, sender)
+            score += semantic_score
+            reasons.extend(semantic_reasons)
+            
+            # NEXT-GEN: Contextual anomaly detection
+            context_score, context_reasons = self._analyze_contextual_anomalies(body_clean, sender)
+            score += context_score
+            reasons.extend(context_reasons)
 
-        return {
-            "phishing": score >= Config.PHISHING_THRESHOLD,
-            "score": min(score, 100),
+        # Apply trusted sender boost
+        final_score = max(0, score + trusted_score_boost)
+        
+        # Special handling for trusted senders with suspicious content
+        if is_trusted_sender and final_score > 30:
+            reasons.insert(0, "Suspicious content from supposedly trusted sender - possible spoofing")
+        
+        result = {
+            "phishing": final_score >= Config.PHISHING_THRESHOLD,
+            "score": min(final_score, 100),
             "reasons": list(set(reasons)),
-            "malicious_urls": list(set(malicious_urls)),
-            "language": language,
-            "analysis_version": "2.0"
+            "malicious_urls": list(set(malicious_urls))
         }
+        
+        # Cache the result
+        self.cache[content_hash] = {
+            'result': result,
+            'timestamp': time.time()
+        }
+        
+        # Clean old cache entries
+        if len(self.cache) > 500:
+            current_time = time.time()
+            self.cache = {k: v for k, v in self.cache.items() 
+                         if current_time - v['timestamp'] < 600}  # Keep only recent entries
+        
+        return result
 
-# Initialize analyzer
 analyzer = PhishingAnalyzer()
