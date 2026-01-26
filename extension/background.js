@@ -1,27 +1,32 @@
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     if (req.type === 'SCAN') {
+        // Port 5001 to match both app.py and Config
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // Reduced to 3 second timeout
+        
         fetch('http://127.0.0.1:5001/analyze', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(req)
+            body: JSON.stringify(req),
+            signal: controller.signal
         })
-        .then(r => r.json())
+        .then(r => {
+            clearTimeout(timeoutId);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
-            chrome.storage.local.get(['scanned', 'blocked'], (s) => {
-                chrome.storage.local.set({
-                    scanned: (s.scanned || 0) + 1,
-                    blocked: (s.blocked || 0) + (data.phishing ? 1 : 0)
-                });
-            });
             sendResponse(data);
         })
-        .catch(() => sendResponse({error: true, reasons: ["Backend Offline"]}));
+        .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('Scan error:', error);
+            if (error.name === 'AbortError') {
+                sendResponse({error: true, reasons: ["Request timeout - analysis taking too long"]});
+            } else {
+                sendResponse({error: true, reasons: ["Backend connection failed"]});
+            }
+        });
         return true; 
-    }
-    
-    // Forward scan results to popup
-    if (req.type === 'SCAN_RESULT') {
-        // This will be picked up by popup.js
-        chrome.runtime.sendMessage(req);
     }
 });
