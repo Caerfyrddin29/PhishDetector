@@ -1,165 +1,211 @@
-function highlightThreats(malicious_urls) {
-    document.querySelectorAll('.a3s.aiL a').forEach(a => {
-        if (malicious_urls.includes(a.href)) {
-            a.style.cssText = "background:#ffe8e8!important; border:2px dashed #d93025!important; padding:2px; border-radius:4px;";
-            a.setAttribute('data-threat', 'true');
-        }
-    });
-}
-
-function createAlert(data) {
-    const old = document.getElementById('phish-notif');
+function createActionBanner(data, senderEmail) {
+    const old = document.getElementById('phish-shield-banner');
     if (old) old.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'phish-shield-banner';
+    const isDangerous = data.phishing;
+    const color = isDangerous ? '#d93025' : '#188038';
     
-    const div = document.createElement('div');
-    div.id = 'phish-notif';
-    const isPhishing = data.phishing;
-    const score = data.score || 0;
-    const language = data.language || 'en';
-    
-    // Set colors based on score
-    let color, bgColor, icon, status;
-    if (score >= 70) {
-        color = '#d93025';
-        bgColor = '#ffe8e8';
-        icon = '🚨';
-        status = 'PHISHING DETECTED';
-    } else if (score >= 30) {
-        color = '#fbbc04';
-        bgColor = '#fef7e0';
-        icon = '⚠️';
-        status = 'SUSPICIOUS EMAIL';
-    } else {
-        color = '#1e8e3e';
-        bgColor = '#e8f5e8';
-        icon = '🛡️';
-        status = 'EMAIL SECURE';
-    }
-    
-    div.style.cssText = `position:fixed; top:25px; right:25px; z-index:2147483647; width:420px; padding:20px; background:${bgColor}; border-left:8px solid ${color}; border-radius:12px; box-shadow:0 12px 40px rgba(0,0,0,0.3); font-family:system-ui,-apple-system,sans-serif;`;
-    
-    // Format reasons for better readability
-    const formattedReasons = data.reasons.slice(0, 5).map(reason => {
-        // Clean up technical terms for user display
-        return reason
-            .replace(/Brand Impersonation/gi, 'Brand impersonation')
-            .replace(/Visual Spoofing/gi, 'Visual spoofing')
-            .replace(/Blacklisted Domain/gi, 'Known phishing domain')
-            .replace(/Masked URL/gi, 'Hidden link destination')
-            .replace(/Pressure keywords/gi, 'Suspicious keywords');
-    });
-    
-    div.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-weight:900; color:${color}; font-size:18px;">
-                ${icon} ${status}
+    banner.style.cssText = `position:fixed; top:70px; right:20px; z-index:9999999; width:350px; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.25); border-top:8px solid ${color}; padding:15px; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: all 0.3s ease;`;
+
+    banner.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <b style="color:${color}; font-size:16px;">${isDangerous ? '🚨 HIGH RISK DETECTED' : '🛡️ EMAIL VERIFIED'}</b>
+                <div style="font-size:12px; color:#5f6368; margin-top:2px;">Risk Score: ${data.score}/100</div>
             </div>
-            <div style="text-align: right;">
-                <div style="font-weight: bold; color: ${color}; font-size: 24px;">
-                    ${score}/100
-                </div>
-                <div style="font-size: 10px; color: #666; text-transform: uppercase;">
-                    ${language} detected
-                </div>
-            </div>
+            <button id="close-sh" style="border:none; background:none; cursor:pointer; color:#5f6368;">✕</button>
         </div>
-        <div style="font-size:13px; color:#555; line-height:1.6; margin-bottom: 15px;">
-            ${formattedReasons.map(r => `• ${r}`).join('<br>')}
+        <div style="margin-top:12px; font-size:13px; color:#3c4043; max-height:100px; overflow-y:auto;">
+            ${data.reasons.map(r => `<div style="margin-bottom:4px;">• ${r}</div>`).join('')}
         </div>
-        ${data.malicious_urls && data.malicious_urls.length > 0 ? `
-            <div style="margin-bottom: 15px;">
-                <div style="font-weight: bold; font-size: 12px; color: #d93025; margin-bottom: 5px;">⚠️ MALICIOUS URLS DETECTED:</div>
-                ${data.malicious_urls.map(url => `<div style="font-size: 11px; color: #666; word-break: break-all; background: #ffe8e8; padding: 4px 8px; border-radius: 4px; margin: 2px 0;">${url}</div>`).join('')}
-            </div>
-        ` : ''}
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size:11px; color:#888;">
-            <div>Auto-dismiss in <span id="countdown">8</span> seconds</div>
-            <div style="font-weight:bold;">PHISHDETECTOR PRO v2.0</div>
+        <div style="display:flex; gap:8px; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+            <button id="trust-btn" style="flex:1; padding:8px; border-radius:6px; border:1px solid #188038; background:white; color:#188038; cursor:pointer; font-weight:bold; font-size:11px;">TRUST SENDER</button>
+            <button id="report-btn" style="flex:1; padding:8px; border-radius:6px; border:1px solid #d93025; background:white; color:#d93025; cursor:pointer; font-weight:bold; font-size:11px;">REPORT SENDER</button>
         </div>
     `;
+
+    document.body.appendChild(banner);
+
+    // Auto-close after 8 seconds for safe emails, 15 seconds for dangerous ones
+    const autoCloseTime = isDangerous ? 15000 : 8000;
+    const autoCloseTimer = setTimeout(() => {
+        banner.remove();
+    }, autoCloseTime);
+
+    // Button Logic
+    document.getElementById('close-sh').onclick = () => {
+        clearTimeout(autoCloseTimer);
+        banner.remove();
+    };
     
-    document.body.appendChild(div);
-    
-    // Auto-dismiss countdown
-    let countdown = 8;
-    const countdownEl = div.querySelector('#countdown');
-    const countdownInterval = setInterval(() => {
-        countdown--;
-        if (countdownEl) countdownEl.innerText = countdown;
-        
-        if (countdown <= 0) {
-            clearInterval(countdownInterval);
-            div.remove();
+    document.getElementById('trust-btn').onclick = () => {
+        clearTimeout(autoCloseTimer);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.get(['trustedList'], (res) => {
+                const list = res.trustedList || [];
+                if (!list.includes(senderEmail)) list.push(senderEmail);
+                chrome.storage.local.set({trustedList: list}, () => {
+                    alert("Sender Added to Trusted List ✅");
+                    banner.remove();
+                });
+            });
+        } else {
+            alert("Extension API error - please reload extension");
+            banner.remove();
         }
-    }, 1000);
+    };
     
-    // Click to dismiss
-    div.addEventListener('click', () => {
-        clearInterval(countdownInterval);
-        div.remove();
-    });
+    document.getElementById('report-btn').onclick = () => {
+        clearTimeout(autoCloseTimer);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.get(['reportedList'], (res) => {
+                const list = res.reportedList || [];
+                if (!list.includes(senderEmail)) list.push(senderEmail);
+                chrome.storage.local.set({reportedList: list}, () => {
+                    alert("Sender Reported & Blocked 🚨");
+                    banner.remove();
+                });
+            });
+        } else {
+            alert("Extension API error - please reload extension");
+            banner.remove();
+        }
+    };
 }
 
 function init() {
-    if (document.getElementById('phish-main-btn')) return;
-    const btn = document.createElement('button');
-    btn.id = 'phish-main-btn';
-    btn.innerText = '🛡️ Scan Safety';
-    btn.style.cssText = 'position:fixed; bottom:30px; right:30px; z-index:9999; padding:14px 24px; background:#1a73e8; color:white; border-radius:30px; border:none; cursor:pointer; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s;';
-    
-    btn.onclick = () => {
-        const emailDiv = document.querySelector('.a3s.aiL');
-        if (!emailDiv) return alert("Please open a Gmail email first.");
+    if (document.getElementById('scan-control')) return;
+    const btn = document.createElement('div');
+    btn.id = 'scan-control';
+    btn.innerHTML = '🛡️ Scan Safety';
+    btn.style.cssText = 'position:fixed; bottom:30px; right:30px; z-index:9999; padding:14px 24px; background:#1a73e8; color:white; border-radius:50px; cursor:pointer; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+
+    btn.onclick = async () => {
+        // Try multiple selectors for different email providers
+        let container = document.querySelector('.a3s.aiL') || 
+                       document.querySelector('[role="main"] .ii.gt') ||
+                       document.querySelector('.message-body') ||
+                       document.querySelector('[data-message-body]') ||
+                       document.querySelector('div[role="article"]') ||
+                       document.body;
         
-        const links = Array.from(emailDiv.querySelectorAll('a')).map(a => ({
-            text: a.innerText, href: a.href, isHidden: window.getComputedStyle(a).opacity === "0"
-        }));
+        // Try multiple sender selectors
+        let senderElement = document.querySelector('.gD') ||
+                            document.querySelector('[email]') ||
+                            document.querySelector('.sender') ||
+                            document.querySelector('[data-email]');
+        
+        const senderEmail = senderElement ? 
+                           (senderElement.getAttribute('email') || 
+                            senderElement.getAttribute('data-email') || 
+                            senderElement.innerText.match(/[\w\.-]+@[\w\.-]+\.\w+/)?.[0] || '') : '';
 
-        // Extract sender information
-        let sender = '';
-        let senderIP = '';
-        try {
-            const senderElement = document.querySelector('.gD span[email]') || document.querySelector('.go span[email]');
-            if (senderElement) {
-                sender = senderElement.getAttribute('email') || senderElement.innerText;
-            }
-        } catch (e) {
-            console.log('Could not extract sender info');
+        if (!container) {
+            console.error("PhishDetector: Could not find email container");
+            return alert("Could not find email content. Please open an email first.");
         }
+        
+        // Get email content and focus on suspicious parts
+        let fullText = container.innerText;
+        
+        // Extract most suspicious sections (first 200 chars + any lines with scam keywords)
+        let suspiciousKeywords = ['cash', 'money', 'earn', 'click here', 'urgent', 'limited time', 'free', 'prize', 'profit', 'bonus'];
+        let highRiskKeywords = ['verify', 'account', 'password', 'suspended', 'login', 'security', 'alert', 'confirm'];
+        let lines = fullText.split('\n');
+        let suspiciousLinesArray = lines.filter(line => 
+            suspiciousKeywords.some(keyword => line.toLowerCase().includes(keyword))
+        );
+        let highRiskLinesArray = lines.filter(line => 
+            highRiskKeywords.some(keyword => line.toLowerCase().includes(keyword))
+        );
+        let suspiciousLines = suspiciousLinesArray.join('\n');
+        
+        // Calculate frontend risk score for better correlation
+        let frontendScore = (suspiciousLinesArray.length * 5) + (highRiskLinesArray.length * 8);
+        
+        // Combine first part with suspicious sections
+        let focusedBody = fullText.substring(0, 200) + '\n' + suspiciousLines;
+        
+        console.log("PhishDetector Enhanced Debug:");
+        console.log("Full text length:", fullText.length);
+        console.log("Focused text length:", focusedBody.length);
+        console.log("Suspicious lines found:", suspiciousLinesArray.length);
+        console.log("High-risk lines found:", highRiskLinesArray.length);
+        console.log("Frontend risk score:", frontendScore);
+        console.log("Sender:", senderEmail);
+        console.log("Body preview:", focusedBody.substring(0, 200));
+        
+        // Check if chrome extension API is available
+        if (typeof chrome === 'undefined' || !chrome.storage) {
+            console.error("PhishDetector: Chrome extension API not available");
+            return alert("Extension error: Please reload the extension or check permissions.");
+        }
+        
+        // Check local storage for reputation before sending to server
+        chrome.storage.local.get(['trustedList', 'reportedList'], (storage) => {
+            const isTrusted = (storage.trustedList || []).includes(senderEmail);
+            const isReported = (storage.reportedList || []).includes(senderEmail);
 
-        // Count attachments
-        const attachments = document.querySelectorAll('.aQH span.aV3') || document.querySelectorAll('[data-tooltip*="attachment"]');
-        const hasAttachments = attachments.length > 0;
-
-        btn.innerText = '🔍 Analyzing...';
-        chrome.runtime.sendMessage({
-            type: 'SCAN', 
-            body: emailDiv.innerText, 
-            links: links,
-            metadata: { 
-                imageCount: emailDiv.querySelectorAll('img').length, 
-                textLength: emailDiv.innerText.length,
-                hasHiddenLinks: links.some(l => l.isHidden),
-                sender: sender,
-                senderIP: senderIP,
-                hasAttachments: hasAttachments,
-                attachmentCount: attachments.length
-            }
-        }, (res) => {
-            btn.innerText = '🛡️ Scan Safety';
-            if (res.error) {
-                alert("Backend Offline! Please start backend server.");
-                return;
-            }
+            btn.innerText = '🔍 Checking...';
+            btn.style.background = '#fbbc04'; // Yellow during scanning
             
-            // Send score to popup for tracking
+            const startTime = Date.now();
+            
+            const links = Array.from(container.querySelectorAll('a')).map(a => ({
+                text: a.innerText, href: a.href, isHidden: window.getComputedStyle(a).opacity === "0"
+            }));
+
             chrome.runtime.sendMessage({
-                type: 'SCAN_RESULT',
-                score: res.score || 0
+                type: 'SCAN',
+                body: focusedBody,  // Send focused content instead of full text
+                sender: senderEmail,
+                links: links,
+                metadata: {
+                    isTrusted, isReported,
+                    imageCount: container.querySelectorAll('img').length,
+                    textLength: focusedBody.length  // Use focused length
+                }
+            }, (res) => {
+                const scanTime = Date.now() - startTime;
+                btn.innerText = '🛡️ Scan Safety';
+                btn.style.background = '#1a73e8'; // Reset to original color
+                
+                if (res.error) {
+                    console.log(`Scan failed after ${scanTime}ms:`, res.reasons);
+                    return alert(`Scan failed: ${res.reasons.join(', ')}`);
+                }
+                
+                console.log(`Scan completed in ${scanTime}ms`);
+                createActionBanner(res, senderEmail);
+                
+                // Update scan statistics
+                chrome.storage.local.get(['scanned', 'blocked'], (storage) => {
+                    const stats = {
+                        scanned: (storage.scanned || 0) + 1,
+                        blocked: (storage.blocked || 0) + (res.phishing ? 1 : 0)
+                    };
+                    chrome.storage.local.set(stats);
+                    
+                    // Update score history directly
+                    chrome.storage.local.get(['scoreHistory'], (historyRes) => {
+                        let history = historyRes.scoreHistory || [];
+                        history.push(res.score);
+                        // Keep only last 50 scores
+                        if (history.length > 50) {
+                            history = history.slice(-50);
+                        }
+                        chrome.storage.local.set({ scoreHistory: history });
+                    });
+                });
+                
+                if (res.phishing) {
+                    container.querySelectorAll('a').forEach(a => {
+                        if (res.malicious_urls.includes(a.href)) a.style.border = "2px dashed red";
+                    });
+                }
             });
-            
-            createAlert(res);
-            if (res.phishing) highlightThreats(res.malicious_urls);
         });
     };
     document.body.appendChild(btn);
