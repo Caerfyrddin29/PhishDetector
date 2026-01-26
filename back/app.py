@@ -1,43 +1,32 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from analyzer import analyzer
+from config import Config
 
 app = Flask(__name__)
 CORS(app)
 
-# Simple test endpoint
 @app.route('/test', methods=['GET'])
 def test():
-    return jsonify({"status": "working"})
+    return jsonify({"status": "ok", "message": "Backend is running"})
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
     try:
         data = request.json
         if not data:
-            return jsonify({"error": "No JSON data received"}), 400
+            return jsonify({"error": "No JSON"}), 400
             
-        body = data.get('body', '')
-        links = data.get('links', [])
-        metadata = data.get('metadata', {})
-        
-        # Use the advanced analyzer
         result = analyzer.analyze(
-            body=body,
-            links=links,
-            metadata=metadata
+            body=data.get('body', ''),
+            links=data.get('links', []),
+            metadata=data.get('metadata', {}),
+            sender=data.get('sender', '')
         )
-        
         return jsonify(result)
-        
     except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "phishing": False,
-            "score": 0,
-            "reasons": [f"Server error: {str(e)}"],
-            "malicious_urls": []
-        }), 500
+        return jsonify({"error": str(e), "phishing": False, "score": 0}), 500
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5001, debug=True)
+    # Using Unified Port from Config
+    app.run(host=Config.HOST, port=Config.PORT, debug=True)
