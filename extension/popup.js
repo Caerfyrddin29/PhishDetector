@@ -201,24 +201,5 @@ fetch('http://127.0.0.1:5001/test', {
     status.style.color = 'var(--danger)';
 });
 
-// Listen for scan results to update score history
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'SCAN_RESULT' && message.score !== undefined) {
-        // Add score to history
-        chrome.storage.local.get(['scoreHistory'], (res) => {
-            let history = res.scoreHistory || [];
-            history.push(message.score);
-            // Keep only last 50 scores
-            if (history.length > 50) {
-                history = history.slice(-50);
-            }
-            chrome.storage.local.set({ scoreHistory: history }, () => {
-                // Update stats immediately after adding score
-                updateStats();
-            });
-        });
-    }
-});
-
 // Refresh stats whenever we open the popup
 chrome.storage.onChanged.addListener(updateStats);
