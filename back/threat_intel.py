@@ -9,15 +9,29 @@ class ThreatIntel:
         domain = urlparse(url).netloc.lower()
         try:
             # Check specific URL in global database
-            r = requests.get(f"{ThreatIntel.API_URL}?_where=(url,eq,{url})", timeout=5)
-            if r.status_code == 200 and len(r.json()) > 0:
-                return "MALICIOUS", 100
+            r = requests.get(f"{ThreatIntel.API_URL}?_where=(url,eq,{url})", timeout=1.5)
+            if r.status_code == 200:
+                try:
+                    data = r.json()
+                    if len(data) > 0:
+                        return "MALICIOUS", 100
+                except (ValueError, KeyError):
+                    pass
             
             # Check if domain itself is flagged
-            r_dom = requests.get(f"{ThreatIntel.API_URL}?_where=(domain,eq,{domain})", timeout=5)
-            if r_dom.status_code == 200 and len(r_dom.json()) > 0:
-                return "SUSPICIOUS", 70
+            r_dom = requests.get(f"{ThreatIntel.API_URL}?_where=(domain,eq,{domain})", timeout=1.5)
+            if r_dom.status_code == 200:
+                try:
+                    data = r_dom.json()
+                    if len(data) > 0:
+                        return "SUSPICIOUS", 70
+                except (ValueError, KeyError):
+                    pass
                 
             return "CLEAN", 0
-        except:
+        except requests.exceptions.Timeout:
+            return "TIMEOUT", 0
+        except requests.exceptions.RequestException:
             return "UNKNOWN", 0
+        except:
+            return "ERROR", 0
