@@ -223,4 +223,5 @@ Thanks for helping with my school project! Every contribution helps make this be
 
 ---
 
-Note: This is a student project, so things might be a bit messy. Thanks for your patience and for helping improve it!
+Note: This is a student project, so things might be a bit messy. Thanks for your patience and for helping improve it! (or at least make this project suck less)
+
