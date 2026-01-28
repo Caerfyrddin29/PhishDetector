@@ -1,251 +1,226 @@
-# 🤝 Contributing to PhishDetector
+# Contributing to PhishDetector
 
-Thank you for your interest in contributing to PhishDetector! This document provides guidelines and information for contributors.
+Thanks for wanting to contribute! This is a school project, so contributions are pretty informal but still appreciated.
 
-## 🚀 Quick Start
+## Quick Start
 
-### Prerequisites
+### What you need
 - Python 3.8+
-- Node.js 16+ (for extension development)
 - Git
+- Chromium browser (for testing the extension)
 
 ### Setup
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/yourusername/PhishDetector.git`
-3. Navigate to the project: `cd PhishDetector`
-4. Install Python dependencies: `pip install -r requirements.txt`
+3. Go to the project folder: `cd PhishDetector`
+4. Install Python stuff: `pip install -r requirements.txt`
 5. Start the backend: `python back/app.py`
-6. Load the Chrome extension from the `extension/` directory
+6. Load the Chrome extension from the `extension/` folder
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 PhishDetector/
-├── back/                    # Backend API server
-│   ├── analyzer.py         # Core detection engine
-│   ├── app.py             # Flask API server
-│   ├── config.py          # Configuration
-│   ├── db_manager.py      # Database management
-│   └── threat_intel.py    # Threat intelligence
+├── back/                    # Backend code
+│   ├── analyzer.py         # Main detection logic
+│   ├── app.py             # Flask server
+│   ├── config.py          # Settings
+│   ├── db_manager.py      # Database stuff
+│   └── threat_intel.py    # External threat data
 ├── extension/              # Chrome extension
 │   ├── background.js      # Background script
-│   ├── content.js         # Content script
-│   ├── manifest.json      # Extension manifest
-│   └── popup.html         # Extension UI
-├── tests/                  # Test suite
+│   ├── content.js         # Gmail integration
+│   ├── manifest.json      # Extension config
+│   └── popup.html         # Extension popup
+├── tests/                  # Test files
 │   ├── run_tests.py       # Test runner
-│   └── test_*.py          # Test files
-└── docs/                   # Documentation
+│   └── test_*.py          # Individual tests
+└── docs/                   # Documentation (kinda)
 ```
 
-## 🧪 Testing
+## Testing
 
-### Run All Tests
+### Run all tests
 ```bash
 python tests/run_tests.py all
 ```
 
-### Run Specific Categories
+### Run specific tests
 ```bash
-python tests/run_tests.py basic      # Core functionality
+python tests/run_tests.py basic      # Basic functionality
 python tests/run_tests.py scams      # Scam detection
-python tests/run_tests.py advanced   # Advanced algorithms
-python tests/run_tests.py content    # Content analysis
+python tests/run_tests.py advanced   # Advanced stuff
 ```
 
-### Adding New Tests
-1. Create test files following the naming convention `test_*.py`
-2. Add to appropriate category in `tests/run_tests.py`
-3. Include both positive (phishing) and negative (legitimate) test cases
-4. Ensure all tests pass before submitting PR
+### Adding tests
+1. Make test files named `test_*.py`
+2. Add them to the right category in `tests/run_tests.py`
+3. Test both phishing emails and normal emails
+4. Make sure tests pass before submitting
 
-## 📝 Code Style
+## Code Style
 
 ### Python
-- Follow PEP 8 style guidelines
-- Use meaningful variable and function names
-- Add docstrings for all functions and classes
-- Keep lines under 100 characters
-- Use type hints where appropriate
+- Try to follow PEP 8 (but don't stress too much)
+- Use clear variable names
+- Add docstrings to important functions
+- Keep lines under 100 characters if possible
 
 ### JavaScript
-- Use modern ES6+ syntax
-- Follow consistent naming conventions
-- Add comments for complex logic
-- Keep functions small and focused
+- Use modern JavaScript (ES6+)
+- Keep functions small
+- Add comments for confusing parts
 
-## 🐛 Bug Reports
+## Bug Reports
 
-When filing bug reports, please include:
-- **Clear description** of the issue
-- **Steps to reproduce** the problem
-- **Expected vs actual behavior**
-- **Environment details** (OS, browser, Python version)
-- **Relevant logs** or error messages
-- **Sample emails** that demonstrate the issue (if applicable)
+If you find a bug, please tell me:
+- What's wrong
+- How to make it happen again
+- What should happen vs what actually happens
+- Your computer/browser info
+- Any error messages
+- Example emails if possible
 
-## ✨ Feature Requests
+## Feature Ideas
 
-We welcome feature requests! Please:
-1. **Check existing issues** to avoid duplicates
-2. **Provide clear description** of the feature
-3. **Explain the use case** and why it's valuable
-4. **Consider implementation complexity**
-5. **Offer to help implement** if possible
+Got ideas for new features? Great!
+1. Check if someone already suggested it
+2. Explain what the feature should do
+3. Why it would be useful
+4. If you want to try implementing it, even better
 
-## 🔧 Development Guidelines
+## Development Guidelines
 
-### Core Principles
-- **Privacy First**: All processing should be local when possible
-- **Transparency**: Users should understand why emails are flagged
-- **Performance**: Keep analysis fast and efficient
-- **Accuracy**: Minimize false positives and negatives
-- **User Experience**: Make the system intuitive and helpful
+### Main ideas
+- **Privacy**: Keep everything local if possible
+- **Speed**: Make it fast
+- **Accuracy**: Try not to flag too many good emails
+- **Simple**: Keep it easy to understand
 
-### Adding New Detection Patterns
-1. **Research**: Study current phishing techniques and patterns
-2. **Test**: Create comprehensive test cases
-3. **Implement**: Add patterns to `analyzer.py`
-4. **Validate**: Ensure accuracy and performance
-5. **Document**: Update README and add comments
+### Adding new detection patterns
+1. Look up current phishing tricks
+2. Make test cases
+3. Add the patterns to `analyzer.py`
+4. Test that it works
+5. Update the README
 
-### Extension Development
-- **Permissions**: Only request necessary permissions
-- **Performance**: Minimize impact on browser performance
-- **Compatibility**: Test across different email providers
-- **Security**: Follow Chrome extension security best practices
+### Extension stuff
+- Only ask for permissions you really need
+- Don't slow down the browser too much
+- Test with different email providers if you can
+- Follow Chrome extension security rules
 
-## 📊 Performance Guidelines
+## Performance
 
-### Target Metrics
-- **Detection Accuracy**: Aim for high true positive rate
-- **False Positive Rate**: Keep false positives minimal
-- **Response Time**: <500ms per email analysis
-- **Memory Usage**: <512MB for backend
-- **CPU Usage**: Reasonable resource consumption
+### What to aim for
+- Try to keep false positives low
+- Analysis should be fast (under 500ms)
+- Don't use too much memory or CPU
 
-### Testing Performance
+### Testing performance
 ```bash
-# Run performance tests
+# Run performance tests (if they exist)
 python tests/test_performance.py
 
-# Profile memory usage
+# Check memory usage
 python -m memory_profiler back/app.py
-
-# Benchmark detection speed
-python tests/benchmark.py
 ```
 
-## 🔒 Security Considerations
+## Security
 
-### Data Privacy
-- **No cloud dependencies** for core functionality
-- **Local processing** of sensitive email content
-- **User consent** for any data collection
-- **Secure storage** of user preferences and data
+### Privacy stuff
+- Don't send email content to the cloud
+- Process everything locally
+- Ask users before collecting any data
+- Store user data safely
 
-### Code Security
-- **Input validation** for all user inputs
-- **SQL injection prevention** in database operations
-- **XSS prevention** in extension code
-- **Secure communication** between components
+### Code security
+- Check all user inputs
+- Be careful with SQL (use parameterized queries)
+- Prevent XSS in the extension
+- Secure communication between parts
 
-## 📚 Documentation
+## Documentation
 
-### Updating Documentation
-- **README.md**: Keep installation and setup instructions current
-- **API docs**: Document new endpoints and parameters
-- **Code comments**: Explain complex algorithms and logic
-- **Test docs**: Document test cases and expected results
+### Keeping docs updated
+- Update README.md when you add big features
+- Add comments to confusing code
+- Document test cases
+- Update CHANGELOG for important changes
 
-### Adding New Features
-1. **Update README** with feature description
-2. **Add inline documentation** to code
-3. **Create test cases** with clear documentation
-4. **Update CHANGELOG** with version notes
+### When adding features
+1. Update the README
+2. Add code comments
+3. Make test cases
+4. Update the changelog
 
-## 🔄 Pull Request Process
+## Pull Request Process
 
-### Before Submitting
-1. **Fork** the repository
-2. **Create feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make changes** and commit with clear messages
-4. **Run tests**: `python tests/run_tests.py all`
-5. **Ensure all tests pass**
-6. **Update documentation** as needed
+### Before submitting
+1. Fork the repo
+2. Make a new branch: `git checkout -b feature/your-feature`
+3. Make your changes and commit them
+4. Run the tests: `python tests/run_tests.py all`
+5. Make sure all tests pass
+6. Update docs if needed
 
-### Submitting PR
-1. **Push to fork**: `git push origin feature/amazing-feature`
-2. **Create Pull Request** with clear title and description
-3. **Link related issues** in the PR description
-4. **Wait for review** and address feedback
-5. **Merge** after approval
+### Submitting
+1. Push to your fork: `git push origin feature/your-feature`
+2. Make a Pull Request
+3. Explain what you changed
+4. Wait for review and fix any issues
+5. Merge when approved
 
-### PR Template
-```markdown
-## Description
-Brief description of changes made.
+### PR template (kinda)
+```
+What I changed:
+- Brief description
 
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
+Type of change:
+- Bug fix
+- New feature
+- Documentation
 
-## Testing
-- [ ] All tests pass
-- [ ] New tests added
-- [ ] Manual testing completed
+Testing:
+- All tests pass
+- I tested it manually
+- Added new tests
 
-## Checklist
-- [ ] Code follows style guidelines
-- [ ] Self-review completed
-- [ ] Documentation updated
-- [ ] Performance considered
+Checklist:
+- Code looks okay
+- Docs updated
+- Seems to work fine
 ```
 
-## 🏆 Recognition
+## Getting Help
 
-### Contributors
-- All contributors are recognized in the README
-- Top contributors may be offered maintainer access
-- Exceptional contributions are highlighted in releases
-
-### Release Notes
-- Contributors are credited in each release
-- Notable contributions are featured in project updates
-- Community feedback is acknowledged and valued
-
-## 📞 Getting Help
-
-### Resources
-- **Documentation**: Check the project README and docs folder
-- **Issues**: Search existing GitHub issues
-- **Discussions**: Use GitHub Discussions for questions
-- **Wiki**: Community-maintained knowledge base (if available)
+### Places to look
+- README.md and docs folder
+- GitHub issues (search first)
+- GitHub Discussions for questions
 
 ### Contact
-- **Issues**: For bug reports and feature requests
-- **Discussions**: For general questions and ideas
-- **Security**: For security-related concerns (private)
+- Create an issue for bugs/feature requests
+- Use Discussions for general questions
+- For security stuff, message privately
 
-## 📄 License
+## License
 
-By contributing to this project, you agree that your contributions will be licensed under the same license as the project. Please see the [LICENSE](LICENSE) file for details.
+By contributing, you agree your code will be under the same license as the project (MIT).
 
-## 🎯 Current Project Focus
+## Current Focus
 
-This is an early-stage project with the following priorities:
-1. **Improving detection accuracy** through better patterns
-2. **Expanding language support** beyond English/French
-3. **Enhancing user experience** and interface
-4. **Building comprehensive test coverage**
-5. **Creating educational documentation**
+This is a learning project, so main priorities are:
+1. Making detection better with new patterns
+2. Adding more languages (beyond English/French)
+3. Making the extension easier to use
+4. Improving test coverage
+5. Writing better documentation
 
-## 🙏 Thank You!
+## Thanks!
 
-Thank you for contributing to PhishDetector! Your contributions help make email security more accessible and effective for everyone. Together, we're building a more secure digital world! 🛡️
+Thanks for helping with my school project! Every contribution helps make this better and I'm learning a lot from this. Together we can make email security a bit better for everyone.
 
 ---
 
-**Note**: This project is currently in active development. We appreciate your patience as we improve the system and welcome all constructive contributions!
+Note: This is a student project, so things might be a bit messy. Thanks for your patience and for helping improve it!
