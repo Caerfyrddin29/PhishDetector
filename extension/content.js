@@ -1,10 +1,15 @@
+// Content script for my phishing detector extension
+// This injects the scan button and analyzes emails
+
 function createActionBanner(data, senderEmail) {
+    // Remove old banner if there is one
     const old = document.getElementById('phish-shield-banner');
     if (old) old.remove();
 
+    // Create the banner
     const banner = document.createElement('div');
     banner.id = 'phish-shield-banner';
-    const isDangerous = data.phishing;
+    const isDangerous = data.is_phishing;
     const color = isDangerous ? '#d93025' : '#188038';
     
     banner.style.cssText = `position:fixed; top:70px; right:20px; z-index:9999999; width:350px; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.25); border-top:8px solid ${color}; padding:15px; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: all 0.3s ease;`;
@@ -28,13 +33,13 @@ function createActionBanner(data, senderEmail) {
 
     document.body.appendChild(banner);
 
-    // Auto-close after 8 seconds for safe emails, 15 seconds for dangerous ones
+    // Auto-close after some time
     const autoCloseTime = isDangerous ? 15000 : 8000;
     const autoCloseTimer = setTimeout(() => {
         banner.remove();
     }, autoCloseTime);
 
-    // Button Logic
+    // Button clicks
     document.getElementById('close-sh').onclick = () => {
         clearTimeout(autoCloseTimer);
         banner.remove();
@@ -76,14 +81,18 @@ function createActionBanner(data, senderEmail) {
 }
 
 function init() {
+    // Don't add button if it's already there
     if (document.getElementById('scan-control')) return;
+    
+    // Create the scan button
     const btn = document.createElement('div');
     btn.id = 'scan-control';
     btn.innerHTML = '🛡️ Scan Safety';
     btn.style.cssText = 'position:fixed; bottom:30px; right:30px; z-index:9999; padding:14px 24px; background:#1a73e8; color:white; border-radius:50px; cursor:pointer; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.3);';
 
+    // What happens when you click the button
     btn.onclick = async () => {
-        // Try multiple selectors for different email providers
+        // Try to find the email content (different email providers use different HTML)
         let container = document.querySelector('.a3s.aiL') || 
                        document.querySelector('[role="main"] .ii.gt') ||
                        document.querySelector('.message-body') ||
@@ -91,7 +100,7 @@ function init() {
                        document.querySelector('div[role="article"]') ||
                        document.body;
         
-        // Try multiple sender selectors
+        // Try to find who sent the email
         let senderElement = document.querySelector('.gD') ||
                             document.querySelector('[email]') ||
                             document.querySelector('.sender') ||
@@ -107,10 +116,10 @@ function init() {
             return alert("Could not find email content. Please open an email first.");
         }
         
-        // Get email content and focus on suspicious parts
+        // Get the email text
         let fullText = container.innerText;
         
-        // Extract most suspicious sections (first 200 chars + any lines with scam keywords)
+        // Look for suspicious words
         let suspiciousKeywords = ['cash', 'money', 'earn', 'click here', 'urgent', 'limited time', 'free', 'prize', 'profit', 'bonus'];
         let highRiskKeywords = ['verify', 'account', 'password', 'suspended', 'login', 'security', 'alert', 'confirm'];
         let lines = fullText.split('\n');
@@ -122,55 +131,57 @@ function init() {
         );
         let suspiciousLines = suspiciousLinesArray.join('\n');
         
-        // Calculate frontend risk score for better correlation
+        // Calculate a quick risk score
         let frontendScore = (suspiciousLinesArray.length * 5) + (highRiskLinesArray.length * 8);
         
-        // Combine first part with suspicious sections
+        // Focus on the suspicious parts
         let focusedBody = fullText.substring(0, 200) + '\n' + suspiciousLines;
         
-        console.log("PhishDetector Enhanced Debug:");
+        console.log("PhishDetector Debug Info:");
         console.log("Full text length:", fullText.length);
         console.log("Focused text length:", focusedBody.length);
         console.log("Suspicious lines found:", suspiciousLinesArray.length);
         console.log("High-risk lines found:", highRiskLinesArray.length);
         console.log("Frontend risk score:", frontendScore);
         console.log("Sender:", senderEmail);
-        console.log("Body preview:", focusedBody.substring(0, 200));
         
-        // Check if chrome extension API is available
+        // Check if extension APIs are working
         if (typeof chrome === 'undefined' || !chrome.storage) {
             console.error("PhishDetector: Chrome extension API not available");
             return alert("Extension error: Please reload the extension or check permissions.");
         }
         
-        // Check local storage for reputation before sending to server
+        // Check if user already trusts or reported this sender
         chrome.storage.local.get(['trustedList', 'reportedList'], (storage) => {
             const isTrusted = (storage.trustedList || []).includes(senderEmail);
             const isReported = (storage.reportedList || []).includes(senderEmail);
 
+            // Show we're analyzing
             btn.innerText = '🔍 Checking...';
             btn.style.background = '#fbbc04'; // Yellow during scanning
             
             const startTime = Date.now();
             
+            // Get all the links in the email
             const links = Array.from(container.querySelectorAll('a')).map(a => ({
                 text: a.innerText, href: a.href, isHidden: window.getComputedStyle(a).opacity === "0"
             }));
 
+            // Send to backend for analysis
             chrome.runtime.sendMessage({
                 type: 'SCAN',
-                body: focusedBody,  // Send focused content instead of full text
+                body: focusedBody,
                 sender: senderEmail,
                 links: links,
                 metadata: {
                     isTrusted, isReported,
                     imageCount: container.querySelectorAll('img').length,
-                    textLength: focusedBody.length  // Use focused length
+                    textLength: focusedBody.length
                 }
             }, (res) => {
                 const scanTime = Date.now() - startTime;
                 btn.innerText = '🛡️ Scan Safety';
-                btn.style.background = '#1a73e8'; // Reset to original color
+                btn.style.background = '#1a73e8'; // Reset color
                 
                 if (res.error) {
                     console.log(`Scan failed after ${scanTime}ms:`, res.reasons);
@@ -180,7 +191,7 @@ function init() {
                 console.log(`Scan completed in ${scanTime}ms`);
                 createActionBanner(res, senderEmail);
                 
-                // Update scan statistics
+                // Update statistics
                 chrome.storage.local.get(['scanned', 'blocked'], (storage) => {
                     const stats = {
                         scanned: (storage.scanned || 0) + 1,
@@ -188,7 +199,7 @@ function init() {
                     };
                     chrome.storage.local.set(stats);
                     
-                    // Update score history directly
+                    // Update score history
                     chrome.storage.local.get(['scoreHistory'], (historyRes) => {
                         let history = historyRes.scoreHistory || [];
                         history.push(res.score);
@@ -200,6 +211,7 @@ function init() {
                     });
                 });
                 
+                // Mark bad links
                 if (res.phishing) {
                     container.querySelectorAll('a').forEach(a => {
                         if (res.malicious_urls.includes(a.href)) a.style.border = "2px dashed red";
@@ -210,4 +222,6 @@ function init() {
     };
     document.body.appendChild(btn);
 }
+
+// Run this every 2 seconds to handle page changes
 setInterval(init, 2000);
