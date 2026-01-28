@@ -17,7 +17,7 @@ def test_empty_content():
         sender="",
         metadata={'imageCount': 0, 'textLength': 0}
     )
-    print(f"Empty body - Score: {result1['score']}, Phishing: {result1['phishing']}")
+    print(f"Empty body - Score: {result1['score']}, Phishing: {result1['is_phishing']}")
     
     # Test 2: Very short body
     result2 = analyzer.analyze(
@@ -26,7 +26,7 @@ def test_empty_content():
         sender="test@example.com",
         metadata={'imageCount': 0, 'textLength': 2}
     )
-    print(f"Short body - Score: {result2['score']}, Phishing: {result2['phishing']}")
+    print(f"Short body - Score: {result2['score']}, Phishing: {result2['is_phishing']}")
     
     # Test 3: Normal email content
     result3 = analyzer.analyze(
@@ -35,7 +35,7 @@ def test_empty_content():
         sender="friend@example.com",
         metadata={'imageCount': 0, 'textLength': 60}
     )
-    print(f"Normal body - Score: {result3['score']}, Phishing: {result3['phishing']}")
+    print(f"Normal body - Score: {result3['score']}, Phishing: {result3['is_phishing']}")
 
 def test_urgency_detection():
     """Test urgency word detection"""

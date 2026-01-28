@@ -1,11 +1,30 @@
 #!/usr/bin/env python3
+"""
+Test suite for the Phishing Analyzer core functionality.
+
+This module contains comprehensive tests for the phishing detection system,
+including normal emails, trusted senders, suspicious content, and performance
+validation for caching mechanisms.
+"""
+
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'back'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'back'))
 
 from analyzer import analyzer
 
 def test_analyzer():
+    """
+    Execute comprehensive tests for the phishing analyzer.
+    
+    Tests various scenarios including normal emails, trusted senders,
+    suspicious content with malicious links, and caching performance.
+    Validates that the analyzer correctly identifies phishing attempts
+    and maintains expected performance characteristics.
+    
+    Returns:
+        None: Prints test results to console
+    """
     print("🧪 Testing Phishing Analyzer...")
     
     # Test 1: Normal email without sender (should not crash)
@@ -15,7 +34,7 @@ def test_analyzer():
         links=[],
         sender=""
     )
-    print(f"✅ Result: {result1['phishing']}, Score: {result1['score']}")
+    print(f"✅ Result: {result1['is_phishing']}, Score: {result1['score']}")
     
     # Test 2: Email with trusted sender
     print("\n2. Testing with trusted sender...")
@@ -24,7 +43,7 @@ def test_analyzer():
         links=[],
         sender="newsletter@linkedin.com"
     )
-    print(f"✅ Result: {result2['phishing']}, Score: {result2['score']}")
+    print(f"✅ Result: {result2['is_phishing']}, Score: {result2['score']}")
     
     # Test 3: Suspicious email with malicious link
     print("\n3. Testing suspicious content...")
@@ -33,7 +52,7 @@ def test_analyzer():
         links=[{"href": "http://paypal-security.xyz/login"}],
         sender="suspicious@scammer.com"
     )
-    print(f"✅ Result: {result3['phishing']}, Score: {result3['score']}")
+    print(f"✅ Result: {result3['is_phishing']}, Score: {result3['score']}")
     print(f"   Reasons: {result3['reasons']}")
     
     # Test 4: Test caching

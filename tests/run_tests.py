@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-Test runner for PhishDetector
-Run all tests or specific test categories
+Test runner for the PhishDetector phishing detection system.
+
+This module provides a comprehensive test execution framework for running
+individual test files or the complete test suite. It handles dynamic test
+module loading and provides standardized test execution with error handling.
+
+Usage:
+    python run_tests.py                    # Run all tests
+    python run_tests.py --specific test   # Run specific test category
 """
 
 import os
@@ -13,7 +20,18 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 def run_test_file(test_file):
-    """Run a single test file"""
+    """
+    Execute a single test file with error handling and reporting.
+    
+    Dynamically loads and executes the specified test module, providing
+    clear status reporting and error handling for failed test executions.
+    
+    Args:
+        test_file (str): Path to the test file to execute
+        
+    Returns:
+        bool: True if test executed successfully, False otherwise
+    """
     print(f"\n{'='*50}")
     print(f"Running {test_file}")
     print(f"{'='*50}")
