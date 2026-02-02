@@ -332,15 +332,16 @@ class PhishingAnalyzer:
             'facebook', 'instagram', 'netflix', 'linkedin', 'twitter'
         ]
         
-        for brand in famous_brands:
-            # Calculate how similar the domain is to the real brand
-            similarity = SequenceMatcher(None, domain.lower(), brand).ratio()
-            
-            # If it's similar but not exactly the same, it's probably fake
-            if similarity > 0.6 and brand not in domain.lower():
-                score += 40
-                reasons.append(f"Domain looks like {brand} but isn't")
-                break
+        # Check for brand impersonation (max 20% of score)
+        for brand, real_domain in Config.PROTECTED_BRANDS.items():
+            # Check if the domain contains the brand name but isn't the real domain
+            if brand.lower() in domain.lower() and real_domain not in domain.lower():
+                # Calculate similarity between the suspicious domain and real brand
+                similarity = SequenceMatcher(None, domain.lower(), brand.lower()).ratio()
+                if similarity > 0.6:
+                    score = 20  # 20% for brand squatting
+                    reasons.append(f"Domain looks like {brand} but isn't")
+                    break
         
         return score, reasons
 
@@ -385,37 +386,40 @@ class PhishingAnalyzer:
         if any(trusted in domain for trusted in trusted_domains):
             return 0, [], None
         
-        # Check our local database of bad domains
+        # Check our local database of bad domains (max 25% of score)
         if db.check_threat(domain) > 0:
-            score += 100
+            score = 25  # 25% for known bad domain
             reasons.append(f"Known bad domain: {domain}")
             is_malicious = True
         
-        # Check for brand squatting
+        # Check for brand squatting (max 20% of score)
         brand_score, brand_reasons = self._check_brand_squatting(domain)
         score += brand_score
         reasons.extend(brand_reasons)
         
-        # Check for suspicious top-level domains
+        # Check for suspicious top-level domains (max 15% of score)
         suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.top', '.click']
         if any(domain.endswith(tld) for tld in suspicious_tlds):
-            score += 30
+            score += 15  # 15% for suspicious TLD
             reasons.append(f"Suspicious domain ending: {domain}")
         
         # Check for URL shorteners (can hide malicious links)
         shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl']
         if any(shortener in domain for shortener in shorteners):
-            score += 15
+            score += 15  # 15% for URL shorteners
             reasons.append("URL shortener (could hide malicious link)")
         
         # Only check external threat intelligence if we already think it's suspicious
         if score >= 30 or is_malicious:
             threat_status, threat_score = ThreatIntel.get_dangerosity(href)
             if threat_score > 0:
-                score += threat_score
+                score = min(100, score + threat_score)  # Cap at 100
                 reasons.append(f"External threat check: {threat_status}")
-                if threat_score >= 100:
+                if threat_score >= 25:  # 25% or higher is malicious
                     is_malicious = True
+        
+        # Cap the score at 100 (percentage-based)
+        score = min(100, score)
         
         # Return the score, reasons, and the URL if it's malicious
         return score, reasons, href if is_malicious else None
@@ -474,103 +478,351 @@ class PhishingAnalyzer:
 
     def _fast_text_analysis(self, body_clean):
         """
-        Perform rapid text analysis to identify common phishing indicators.
+        Quick check for obvious scam words in the email.
         
-        This method conducts an initial scan of email content for frequently used
-        phishing keywords and phrases in both English and French. It provides a quick
-        risk assessment based on the presence of suspicious terminology.
+        This does a fast scan of the email text looking for red flags that indicate
+        phishing attempts. It uses keyword matching for common scam phrases and urgency indicators.
         
         Args:
-            body_clean (str): The email content with HTML removed and converted to lowercase
+            body_clean (str): The email text with HTML removed and everything lowercase
             
         Returns:
-            tuple: (risk_score, indicators) where:
-                - risk_score (int): Calculated risk score based on keyword frequency
-                - indicators (list[str]): Categories of suspicious keywords detected
+            tuple: (score, reasons) where:
+                - score (int): How sketchy this looks (0-100)
+                - reasons (list[str]): What exactly set off our alarm bells
                 
         Example:
-            >>> score, indicators = analyzer._fast_text_analysis("urgent verify account suspended winner")
-            >>> print(f"Risk score: {score}, Indicators: {indicators}")
-            Risk score: 90, Indicators: ['Found 3 urgent words', 'Found 3 account security words', 'Found 1 scam-related words']
+            >>> score, reasons = analyzer._fast_text_analysis("urgent verify account suspended winner")
+            >>> print(f"Risk score: {score}, Red flags: {reasons}")
+            Risk score: 90, Red flags: ['Found 3 urgent words', 'Found 3 account security words', 'Found 1 scam-related words']
         """
         score = 0
         reasons = []
         
-        # Check for French keywords first (bilingual support)
-        urgency_words = []
-        french_keywords = ['urgent', 'vérifier', 'compte', 'suspendu', 'connexion', 'action requise']
-        if any(word in body_clean for word in french_keywords):
-            urgency_words.extend(french_keywords)
+        # Figure out if it's French or English first
+        is_french = self._detect_language(body_clean)
         
-        # Always include English keywords
-        english_keywords = ['urgent', 'verify', 'account', 'password', 'suspended', 'action required', 'login']
-        urgency_words.extend(english_keywords)
+        # Get the right keywords for the language
+        if is_french:
+            urgency_words = Config.LEXICON['FR']['urgency'].copy()
+            account_words = Config.LEXICON['FR']['account_security'].copy()
+            scam_words = Config.LEXICON['FR']['scam_indicators'].copy()
+            manipulation_words = Config.LEXICON['FR']['manipulation'].copy()
+            threat_words = Config.LEXICON['FR']['threats'].copy()
+            pressure_words = Config.LEXICON['FR']['pressure'].copy()
+        else:
+            urgency_words = Config.LEXICON['EN']['urgency'].copy()
+            account_words = Config.LEXICON['EN']['account_security'].copy()
+            scam_words = Config.LEXICON['EN']['scam_indicators'].copy()
+            manipulation_words = Config.LEXICON['EN']['manipulation'].copy()
+            threat_words = Config.LEXICON['EN']['threats'].copy()
+            pressure_words = Config.LEXICON['EN']['pressure'].copy()
         
-        # Count urgent words
+        # Count how many suspicious words we find
         urgent_count = sum(1 for word in urgency_words if word in body_clean.lower())
-        
-        # Count scam words
-        scam_words = ['exclusive task', 'multiply your earnings', 'guaranteed profit', 'earn $', 
-                     'cash prize', 'winner', 'congratulations', 'free money', 'quick cash']
+        account_count = sum(1 for word in account_words if word in body_clean.lower())
         scam_count = sum(1 for word in scam_words if word in body_clean.lower())
+        manipulation_count = sum(1 for word in manipulation_words if word in body_clean.lower())
+        threat_count = sum(1 for word in threat_words if word in body_clean.lower())
+        pressure_count = sum(1 for word in pressure_words if word in body_clean.lower())
         
-        # Count sophisticated scam indicators
-        sophisticated_words = ['verify', 'account', 'suspended', 'security', 'confirm']
-        sophisticated_count = sum(1 for word in sophisticated_words if word in body_clean.lower())
+        # Calculate score based on word counts with different weights
+        score = (urgent_count * 8) + (account_count * 10) + (scam_count * 6) + (manipulation_count * 4) + (threat_count * 12) + (pressure_count * 6)
         
-        # Calculate score based on word counts
-        score = (urgent_count * 10) + (scam_count * 12) + (sophisticated_count * 15)
+        # Add bonus for high volume of suspicious words (but cap at 100)
+        total_suspicious = urgent_count + account_count + scam_count + manipulation_count + threat_count + pressure_count
+        if total_suspicious > 5:  # Even lower threshold
+            bonus = min(30, (total_suspicious - 5) * 4)  # Max 30% bonus
+            score = min(100, score + bonus)
         
-        # Add volume multiplier for high suspicious word counts
-        total_suspicious = urgent_count + scam_count + sophisticated_count
-        if total_suspicious > 5:
-            multiplier = max(1.0, total_suspicious / 5.0)
-            score = int(score * multiplier)
+        # NEW: Check for tricky scam patterns
+        subtle_patterns = self._detect_subtle_patterns(body_clean)
+        score += subtle_patterns['score']
+        reasons.extend(subtle_patterns['reasons'])
+        
+        # Cap final score at 100
+        score = min(100, score)
         
         # Add reasons for what we found
         if urgent_count > 0:
             reasons.append(f"Found {urgent_count} urgent words")
+        if account_count > 0:
+            reasons.append(f"Found {account_count} account security words")
         if scam_count > 2:
             reasons.append(f"Found {scam_count} scam-related words")
-        if sophisticated_count > 0:
-            reasons.append(f"Found {sophisticated_count} account security words")
+        if manipulation_count > 1:
+            reasons.append(f"Found {manipulation_count} manipulation tactics")
+        if threat_count > 0:
+            reasons.append(f"Found {threat_count} threat indicators")
+        if pressure_count > 1:
+            reasons.append(f"Found {pressure_count} pressure tactics")
         if total_suspicious > 10:
             reasons.append(f"High volume of suspicious words ({total_suspicious} total)")
         
         return score, reasons
 
-    def analyze(self, body, links=None, metadata=None, sender='', debug_mode=False):
+    def _detect_subtle_patterns(self, text):
         """
-        Perform comprehensive phishing analysis using multiple detection methods.
+        Check for tricky scam patterns that normal keyword detection misses.
         
-        This method serves as the primary analysis function, integrating text analysis,
-        link examination, sender evaluation, and behavioral pattern recognition to determine
-        the likelihood of phishing. It combines all detection algorithms into a unified risk assessment.
+        This looks for sneaky phishing attempts like BEC scams, fake job offers,
+        investment scams, and other stuff that doesn't use obvious scam words.
         
         Args:
-            body (str): Complete email content including HTML and text
-            links (list, optional): Extracted links from the email content
-            metadata (dict, optional): Additional email context including:
-                - isTrusted (bool): Sender is in trusted contacts list
-                - isReported (bool): Sender has been previously reported
-                - imageCount (int): Number of embedded images
-                - textLength (int): Length of text content
-            sender (str, optional): Email address of the sender
-            debug_mode (bool): Disable caching for testing purposes
+            text (str): The email text to check
             
         Returns:
-            dict: Comprehensive analysis results containing:
-                - is_phishing (bool): Determination if email exceeds phishing threshold
-                - score (int): Total risk assessment score
-                - threshold (int): Minimum score required for phishing classification
-                - reasons (list[str]): All detected suspicious indicators
-                - malicious_urls (list[str]): Confirmed malicious URLs
-                - analysis_time (float): Processing duration in seconds
+            dict: {'score': int, 'reasons': list[str]}
+        """
+        score = 0
+        reasons = []
+        text_lower = text.lower()
+        
+        # Check if it's French first
+        is_french = self._detect_language(text)
+        
+        # BEC scams - fake payment requests
+        if is_french:
+            bec_words = [
+                'paiement urgent fournisseur', 'coordonnées bancaires', 'nouvelles informations bancaires',
+                'numéro de compte', 'iban', 'traiter ce paiement', 'retarde le projet',
+                'dernière minute', 'problèmes techniques', 'compte précédent'
+            ]
+        else:
+            bec_words = [
+                'urgent vendor payment', 'updated banking details', 'new banking information',
+                'account number', 'routing number', 'process this today', 'holding up the project',
+                'last minute', 'technical issues', 'previous account'
+            ]
+        
+        bec_count = sum(1 for word in bec_words if word in text_lower)
+        if bec_count >= 3:
+            score += 25
+            reasons.append("Business Email Compromise pattern detected")
+        elif bec_count >= 2:
+            score += 15
+            reasons.append("Suspicious payment request pattern")
+        
+        # Investment scams - fake investment opportunities
+        if is_french:
+            investment_words = [
+                'opportunité d\'investissement exclusive', 'informatique quantique', 'algorithme propriétaire',
+                'inefficacités du marché', 'disponibilité limitée', 'seulement 30 nouveaux investisseurs',
+                'performance constante', 'rendement moyen', 'investissement minimum'
+            ]
+        else:
+            investment_words = [
+                'exclusive investment opportunity', 'quantum computing', 'proprietary algorithm',
+                'market inefficiencies', 'limited availability', 'only 50 new investors',
+                'outperformance', 'consistent returns', 'minimum investment'
+            ]
+        
+        investment_count = sum(1 for word in investment_words if word in text_lower)
+        if investment_count >= 4:
+            score += 20
+            reasons.append("Professional investment scam pattern")
+        elif investment_count >= 2:
+            score += 10
+            reasons.append("Suspicious investment offer")
+        
+        # Tech support scams
+        if is_french:
+            tech_words = [
+                'système de surveillance de sécurité', 'activité de connexion inhabituelle', 'vérifier votre identité',
+                'temporairement suspendu', 'microsoft 365', 'azurewebsites.net', 'adresse ip inconnue'
+            ]
+        else:
+            tech_words = [
+                'security monitoring system', 'unusual login activity', 'verify your identity',
+                'temporarily suspended', 'microsoft 365', 'azurewebsites.net', 'unknown ip address'
+            ]
+        
+        tech_count = sum(1 for word in tech_words if word in text_lower)
+        if tech_count >= 3:
+            score += 30
+            reasons.append("Tech support impersonation detected")
+        elif tech_count >= 2:
+            score += 15
+            reasons.append("Suspicious security alert")
+        
+        # Romance scams
+        if is_french:
+            romance_words = [
+                'connexion spéciale', 'héritage important', 'processus légal', 'frais de documentation',
+                'libérer les fonds', 'commencer notre vie ensemble', 'jamais ressenti ça',
+                'billets d\'avion', 'obstacle temporaire'
+            ]
+        else:
+            romance_words = [
+                'special connection', 'large inheritance', 'legal process', 'documentation fees',
+                'release the funds', 'start our life together', 'never felt this way',
+                'booking flights', 'temporary hurdle'
+            ]
+        
+        romance_count = sum(1 for word in romance_words if word in text_lower)
+        if romance_count >= 4:
+            score += 25
+            reasons.append("Romance scam pattern detected")
+        elif romance_count >= 2:
+            score += 12
+            reasons.append("Emotional manipulation detected")
+        
+        # Charity scams
+        if is_french:
+            charity_words = [
+                'appel d\'urgence', 'enfants réfugiés', 'niveaux critiques', 'association loi 1901',
+                'déductible des impôts', 'temps est critique', 'souffrent en ce moment même'
+            ]
+        else:
+            charity_words = [
+                'emergency appeal', 'refugee children', 'critical levels', 'registered 501(c)(3)',
+                'tax-deductible donation', 'time is critical', 'suffering as we speak'
+            ]
+        
+        charity_count = sum(1 for word in charity_words if word in text_lower)
+        if charity_count >= 4:
+            score += 20
+            reasons.append("Suspicious charity appeal")
+        elif charity_count >= 2:
+            score += 10
+            reasons.append("Emotional charity appeal")
+        
+        # Job offer scams
+        if is_french:
+            job_words = [
+                'spécialiste saisie données distant', 'vérification d\'antécédents', 'configuration virement bancaire',
+                'portail employé sécurisé', 'numéro de sécurité sociale', 'informations bancaires',
+                'entreprise fortune 500', 'début immédiat'
+            ]
+        else:
+            job_words = [
+                'remote data entry specialist', 'background check', 'direct deposit setup',
+                'secure employee portal', 'social security number', 'bank account information',
+                'fortune 500 company', 'immediate start'
+            ]
+        
+        job_count = sum(1 for word in job_words if word in text_lower)
+        if job_count >= 4:
+            score += 25
+            reasons.append("Suspicious job offer pattern")
+        elif job_count >= 2:
+            score += 12
+            reasons.append("Questionable job offer")
+        
+        # Money transfer requests
+        if is_french:
+            money_words = [
+                'virement bancaire', 'western union', 'moneygram', 'cartes cadeaux',
+                'bitcoin', 'cryptomonnaie', 'investissement requis', 'frais de traitement'
+            ]
+        else:
+            money_words = [
+                'wire transfer', 'western union', 'moneygram', 'gift cards',
+                'bitcoin', 'cryptocurrency', 'investment required', 'processing fee'
+            ]
+        
+        money_count = sum(1 for word in money_words if word in text_lower)
+        if money_count >= 2:
+            score += 20
+            reasons.append("Financial request pattern detected")
+        
+        # Fake domains
+        if 'azurewebsites.net' in text_lower or 'secure-onboarding' in text_lower:
+            score += 15
+            reasons.append("Suspicious domain impersonation")
+        
+        # Pressure tactics
+        if is_french:
+            pressure_words = [
+                'temps limité', 'disponible uniquement', 'offre exclusive', 'agissez maintenant',
+                'ne manquez pas', 'dernière chance', 'action immédiate requise'
+            ]
+        else:
+            pressure_words = [
+                'limited time', 'only available to', 'exclusive offer', 'act now',
+                'don\'t miss out', 'last chance', 'immediate action required'
+            ]
+        
+        pressure_count = sum(1 for word in pressure_words if word in text_lower)
+        if pressure_count >= 2:
+            score += 10
+            reasons.append("Subtle pressure tactics detected")
+        
+        # Don't let the score go too high
+        return {'score': min(score, 40), 'reasons': reasons}
+
+    def _detect_language(self, text):
+        """
+        Figure out if the email is in French or English.
+        
+        Just counts some common words in each language to guess which one it is.
+        
+        Args:
+            text (str): The email text to check
+            
+        Returns:
+            bool: True if French, False if English
+        """
+        french_words = [
+            'le', 'la', 'les', 'de', 'du', 'des', 'et', 'est', 'dans', 'pour', 'avec',
+            'vous', 'votre', 'vos', 'nous', 'notre', 'nos', 'il', 'elle', 'ils', 'elles',
+            'un', 'une', 'ce', 'cette', 'ces', 'celui', 'celle', 'ceux', 'celles',
+            'mais', 'où', 'quand', 'comment', 'pourquoi', 'que', 'qui', 'dont',
+            'très', 'trop', 'plus', 'moins', 'bien', 'mal', 'pas', 'ne', 'ni',
+            'aussi', 'comme', 'si', 'alors', 'donc', 'car', 'parce', 'pendant',
+            'français', 'france', 'paris', 'euros', '€', 'm.', 'mme', 'mlle'
+        ]
+        
+        english_words = [
+            'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+            'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before',
+            'after', 'above', 'below', 'between', 'among', 'under', 'over', 'above',
+            'you', 'your', 'yours', 'we', 'our', 'ours', 'they', 'them', 'their',
+            'he', 'him', 'his', 'she', 'her', 'hers', 'it', 'its', 'this', 'that',
+            'these', 'those', 'which', 'who', 'whom', 'whose', 'what', 'when', 'where',
+            'why', 'how', 'very', 'too', 'more', 'less', 'well', 'badly', 'not',
+            'also', 'as', 'if', 'then', 'so', 'because', 'while', 'english', 'dollar', '$'
+        ]
+        
+        text_lower = text.lower()
+        french_count = sum(1 for word in french_words if word in text_lower)
+        english_count = sum(1 for word in english_words if word in text_lower)
+        
+        # If we find way more French words than English, it's probably French
+        return french_count > english_count * 1.2
+
+    def analyze(self, body, links=None, metadata=None, sender='', debug_mode=False):
+        """
+        Main function to check if an email is a phishing attempt.
+        
+        This is the main function that puts everything together. It checks the text,
+        looks at the links, checks who sent it, and uses all our detection methods
+        to figure out if it's a phishing email.
+        
+        Args:
+            body (str): The whole email content (HTML and text)
+            links (list, optional): Links found in the email
+            metadata (dict, optional): Extra info like:
+                - isTrusted (bool): If sender is in trusted contacts
+                - isReported (bool): If sender was reported before
+                - imageCount (int): Number of images in email
+                - textLength (int): How much text is in the email
+            sender (str, optional): Who sent the email
+            debug_mode (bool): If True, skips caching for testing
+            
+        Returns:
+            dict: Results with all the info:
+                - is_phishing (bool): True if it's phishing
+                - score (int): Risk score from 0-100
+                - threshold (int): Score needed to be called phishing
+                - reasons (list[str]): Why we think it's phishing
+                - malicious_urls (list[str]): Bad URLs we found
+                - analysis_time (float): How long it took to analyze
                 
         Example:
             >>> result = analyzer.analyze("Urgent! Click here now!", [], {}, "scammer@fake.com")
-            >>> print(f"Phishing detected: {result['is_phishing']}, Score: {result['score']}")
-            Phishing detected: True, Score: 70
+            >>> print(f"Phishing: {result['is_phishing']}, Score: {result['score']}")
+            Phishing: True, Score: 70
         """
         start_time = time.time()
         
@@ -578,9 +830,11 @@ class PhishingAnalyzer:
         body_clean = re.sub(r'<[^>]+>', ' ', body).lower()
         metadata = metadata or {}
         
+        # Generate content hash early (needed for caching logic)
+        content_hash = self._get_content_hash(body, sender, len(links) if links else 0)
+        
         # Skip caching if we're in debug mode
         if not debug_mode:
-            content_hash = self._get_content_hash(body, sender, len(links) if links else 0)
             if content_hash in self.cache:
                 cached_result = self.cache[content_hash]
                 # Check if cache is still valid (5 minutes)
@@ -605,7 +859,7 @@ class PhishingAnalyzer:
             return result
         
         if metadata.get('isReported'):
-            total_score += 100
+            total_score = 100  # Set to max, don't add
             all_reasons.append("Sender previously reported as malicious by you")
         
         # Check if sender is trusted (affects scoring)
@@ -617,44 +871,31 @@ class PhishingAnalyzer:
             if is_trusted_sender:
                 trusted_score_boost = -20  # Give benefit of doubt
         
-        # Image-to-text ratio analysis (common phishing technique)
-        if metadata.get('imageCount', 0) >= 1 and metadata.get('textLength', 0) < 60:
-            total_score += 40
-            all_reasons.append("High image-to-text ratio (Common filter bypass)")
-        
-        # 1. Analyze the text content
+        # 1. Analyze the text content (main scoring method)
         text_score, text_reasons = self._fast_text_analysis(body_clean)
-        total_score += text_score
         all_reasons.extend(text_reasons)
         
-        # 2. Analyze linguistic patterns
-        linguistic_score, linguistic_reasons = self._analyze_linguistic_patterns(body_clean)
-        total_score += linguistic_score
-        all_reasons.extend(linguistic_reasons)
-        
-        # 3. Analyze semantic anomalies
-        semantic_score, semantic_reasons = self._analyze_semantic_anomalies(body_clean, sender)
-        total_score += semantic_score
-        all_reasons.extend(semantic_reasons)
-        
-        # 4. Analyze contextual anomalies
-        contextual_score, contextual_reasons = self._analyze_contextual_anomalies(body_clean, sender)
-        total_score += contextual_score
-        all_reasons.extend(contextual_reasons)
-        
-        # 5. Analyze sender behavior
-        sender_result = self._analyze_sender_behavior(body_clean, sender)
-        total_score += sender_result['score']
-        all_reasons.extend(sender_result['reasons'])
-        
-        # 6. Analyze links if there are any
+        # 2. Analyze links if there are any (add to score but cap at 100)
+        link_score = 0
         if links:
             link_score, link_reasons, malicious_urls = self._analyze_links(links)
-            total_score += link_score
             all_reasons.extend(link_reasons)
         
+        # 3. Add image-to-text ratio if applicable
+        image_score = 0
+        if metadata.get('imageCount', 0) >= 1 and metadata.get('textLength', 0) < 60:
+            image_score = 20
+            all_reasons.append("High image-to-text ratio (Common filter bypass)")
+        
+        # Combine scores with proper capping
+        total_score = min(100, text_score + link_score + image_score)
+        
         # Apply trusted sender boost
-        total_score += trusted_score_boost
+        if trusted_score_boost < 0:
+            total_score = max(0, total_score + trusted_score_boost)
+        
+        # Ensure score never goes below 0
+        total_score = max(0, total_score)
         
         # Determine if it's phishing based on the threshold
         is_phishing = total_score >= Config.PHISHING_THRESHOLD
