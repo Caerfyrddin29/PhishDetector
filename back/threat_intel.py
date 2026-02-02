@@ -14,7 +14,7 @@ class ThreatIntel:
                 try:
                     data = r.json()
                     if len(data) > 0:
-                        return "MALICIOUS", 100
+                        return "MALICIOUS", 25  # 25% for confirmed malicious
                 except (ValueError, KeyError):
                     pass
             
@@ -24,7 +24,7 @@ class ThreatIntel:
                 try:
                     data = r_dom.json()
                     if len(data) > 0:
-                        return "SUSPICIOUS", 70
+                        return "SUSPICIOUS", 15  # 15% for suspicious domain
                 except (ValueError, KeyError):
                     pass
                 
