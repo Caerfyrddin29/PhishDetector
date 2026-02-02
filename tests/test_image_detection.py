@@ -10,6 +10,6 @@ result = analyzer.analyze(
     metadata={'imageCount': 2, 'textLength': 15}
 )
 
-print(f'Image-heavy phishing detection: {result["phishing"]}')
+print(f'Image-heavy phishing detection: {result["is_phishing"]}')
 print(f'Score: {result["score"]}')
 print(f'Reasons: {result["reasons"]}')

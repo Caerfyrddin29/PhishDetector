@@ -12,5 +12,5 @@ result = analyzer.analyze(
 
 print(f'French detection test:')
 print(f'Score: {result["score"]}')
-print(f'Phishing: {result["phishing"]}')
+print(f'Phishing: {result["is_phishing"]}')
 print(f'Reasons: {result["reasons"]}')

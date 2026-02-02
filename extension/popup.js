@@ -9,7 +9,7 @@ function updateStats() {
         // Update score history
         scoreHistory = res.scoreHistory || [];
         updateAverageScore();
-        updateChart();
+        updateChart(); // Ensure chart is updated
         
         if (res.theme) document.body.setAttribute('data-theme', res.theme);
     });
@@ -203,3 +203,98 @@ fetch('http://127.0.0.1:5001/test', {
 
 // Refresh stats whenever we open the popup
 chrome.storage.onChanged.addListener(updateStats);
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+        
+        if (tabId === 'domains') {
+            loadBlockedDomains();
+        } else if (tabId === 'dashboard') {
+            // Redraw chart when switching back to dashboard
+            setTimeout(() => updateChart(), 100);
+        }
+    });
+});
+
+// Domain management functions
+function loadBlockedDomains() {
+    chrome.storage.local.get(['blockedDomains', 'autoSpamEnabled'], (res) => {
+        const domains = res.blockedDomains || [];
+        const list = document.getElementById('blocked-domains-list');
+        
+        if (domains.length === 0) {
+            list.innerHTML = '<div style="text-align: center; opacity: 0.6; padding: 20px;">No blocked domains yet</div>';
+        } else {
+            list.innerHTML = domains.map(domain => `
+                <div class="domain-item">
+                    <span>${domain}</span>
+                    <div class="domain-actions">
+                        <button class="btn btn-small btn-success" onclick="unblockDomain('${domain}')">Unblock</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        document.getElementById('auto-spam-enabled').checked = res.autoSpamEnabled !== false;
+    });
+}
+
+function blockDomain() {
+    const input = document.getElementById('new-domain');
+    const domain = input.value.trim().toLowerCase();
+    
+    if (!domain) {
+        alert('Please enter a domain');
+        return;
+    }
+    
+    // Basic domain validation
+    if (!domain.includes('.') || domain.includes(' ')) {
+        alert('Please enter a valid domain (e.g., spam.com)');
+        return;
+    }
+    
+    chrome.storage.local.get(['blockedDomains'], (res) => {
+        const domains = res.blockedDomains || [];
+        if (domains.includes(domain)) {
+            alert('This domain is already blocked');
+            return;
+        }
+        
+        domains.push(domain);
+        chrome.storage.local.set({blockedDomains: domains}, () => {
+            input.value = '';
+            loadBlockedDomains();
+        });
+    });
+}
+
+function unblockDomain(domain) {
+    chrome.storage.local.get(['blockedDomains'], (res) => {
+        const domains = res.blockedDomains || [];
+        const index = domains.indexOf(domain);
+        if (index > -1) {
+            domains.splice(index, 1);
+            chrome.storage.local.set({blockedDomains: domains}, () => {
+                loadBlockedDomains();
+            });
+        }
+    });
+}
+
+// Event listeners for domain management
+document.getElementById('add-domain-btn').onclick = blockDomain;
+document.getElementById('new-domain').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') blockDomain();
+});
+
+document.getElementById('auto-spam-enabled').onchange = (e) => {
+    chrome.storage.local.set({autoSpamEnabled: e.target.checked});
+};

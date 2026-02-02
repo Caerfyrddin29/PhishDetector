@@ -1,227 +1,150 @@
 # PhishDetector
 
-A phishing detection system with local processing and Chrome extension integration.
+A simple phishing detector I made for my school project. It checks emails for scams and works with Chrome.
 
-## Overview
+## What This Does
 
-PhishDetector is an email security tool that analyzes email content for potential phishing threats. It processes emails locally on your device without sending data to external services, ensuring privacy while providing protection against phishing attacks.
+This tool looks at emails and tries to figure out if they're trying to scam you. Everything runs on your computer so your private info stays private.
 
 ## Features
 
-### Detection Capabilities
-- **Multi-layer analysis**: 6-layer detection engine with pattern matching
-- **Keyword analysis**: Detects suspicious words and phrases in English and French
-- **Link analysis**: Checks URLs against known threat databases
-- **Brand impersonation**: Identifies attempts to spoof major brands
-- **Content scoring**: Provides risk scores for email analysis
-- **Real-time processing**: Fast analysis with intelligent caching
+### What It Can Do
+- **Checks for scam words**: Looks for suspicious stuff in English and French
+- **Analyzes links**: Checks if URLs are bad or fake
+- **Brand protection**: Catches people pretending to be big companies
+- **Risk scoring**: Gives a score from 0-100 for how risky an email is
+- **Fast processing**: Works quickly and remembers what it's seen before
 
-### Technical Features
-- **Local processing**: All analysis happens on your device
-- **Chrome extension**: Integrates with Gmail for real-time protection
-- **Backend API**: Flask server for email analysis
-- **SQLite database**: Local threat intelligence storage
-- **Comprehensive testing**: Full test suite covering various scenarios
+### Technical Stuff
+- **Local only**: Everything happens on your computer
+- **Chrome extension**: Works with Gmail to protect you in real-time
+- **Python backend**: Flask server that does the analysis
+- **Database**: SQLite for storing bad URLs
+- **Lots of tests**: I tested it with many different scam emails
 
-## Quick Start
+## How to Use It
 
-### Prerequisites
-- Python 3.8+
-- Chromium browser
-- Git
+### What You Need
+- Python 3.8 or newer
+- Chrome browser
+- Basic Python knowledge
 
-### 1. Install Dependencies
+### Installation
+1. Clone this repo
+2. Install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Start the backend server:
+   ```bash
+   cd back
+   python app.py
+   ```
+4. Load the Chrome extension:
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select the `extension` folder
+   - Go to Gmail and start using it!
+
+## How It Works
+
+### The Detection Engine
+I built a 6-layer system that checks emails:
+
+1. **Text Analysis**: Looks for scam keywords and urgent language
+2. **Link Checking**: Analyzes URLs against threat databases
+3. **Brand Protection**: Catches fake company impersonation
+4. **Language Detection**: Works in English and French
+5. **Pattern Recognition**: Finds subtle scam patterns
+6. **Risk Scoring**: Calculates a danger score (0-100)
+
+### The Chrome Extension
+The extension shows a popup when you open emails in Gmail. It displays:
+- Risk score with a visual indicator
+- Reasons why an email might be dangerous
+- Options to trust, report, or block senders
+
+### The Backend
+A simple Flask server that:
+- Receives email content from the extension
+- Runs the phishing detection algorithms
+- Returns results with risk scores and reasons
+- Updates local threat intelligence
+
+## Testing
+
+I included lots of tests to make sure it works:
+
 ```bash
-pip install -r requirements.txt
+cd tests
+python run_tests.py all
 ```
 
-### 2. Start the Backend Server
-```bash
-# Windows
-start_backend.bat
-
-# Manual start
-cd back
-python app.py
-```
-The server will start on `http://127.0.0.1:5001`
-
-### 3. Install Chrome Extension
-1. Open Chromium and go to `chrome://extensions/`
-2. Enable "Developer mode" (top right)
-3. Click "Load unpacked" and select the `extension` folder
-4. The extension will appear in your browser toolbar
-
-### 4. Verify Installation
-```bash
-# Run tests to verify everything works
-python tests/run_tests.py all
-```
+The tests cover:
+- Basic phishing detection
+- Subtle scam patterns
+- French and English emails
+- Link analysis
+- Edge cases
 
 ## Project Structure
 
 ```
-PhishDetector/
-├── back/                    # Backend API server
-│   ├── analyzer.py         # Core detection engine
-│   ├── app.py             # Flask API server
-│   ├── config.py          # Configuration settings
-│   ├── db_manager.py      # Database management
-│   └── threat_intel.py    # Threat intelligence
-├── extension/              # Chrome extension
-│   ├── content.js         # Gmail integration
-│   ├── background.js      # Background processing
-│   ├── manifest.json      # Extension configuration
-│   └── popup.html         # Extension popup
-├── tests/                  # Test suite
-│   ├── run_tests.py       # Test runner
-│   ├── test_analyzer.py   # Core functionality tests
-│   ├── test_spam_detection.py # Phishing pattern tests
-│   └── debug_extension.py # Extension debugging
-├── docs/                   # Documentation
-├── requirements.txt        # Python dependencies
-├── start_backend.bat       # Quick start script
-└── README.md               # This file
-```
-
-## Detection System
-
-The system uses a 6-layer analysis approach:
-
-1. **Fast Text Analysis** - Quick keyword scanning for suspicious terms
-2. **Linguistic Patterns** - Advanced regex patterns for scam language
-3. **Semantic Anomalies** - Detects unnatural conversation patterns
-4. **Contextual Analysis** - Finds logical inconsistencies
-5. **Sender Behavior** - Analyzes email address characteristics
-6. **Link Analysis** - Comprehensive URL threat assessment
-
-### Risk Scoring
-- **0-49 points**: Safe (Green banner)
-- **50-99 points**: Suspicious (Red banner, lower confidence)
-- **100+ points**: High Risk (Red banner, high confidence)
-
-### Attack Types Detected
-- Business Email Compromise (BEC)
-- Credential harvesting
-- Advance fee fraud
-- Tech support scams
-- Crypto investment scams
-- Brand impersonation
-
-## Testing
-
-### Run All Tests
-```bash
-python tests/run_tests.py all
-```
-
-### Run Specific Categories
-```bash
-python tests/run_tests.py basic      # Core functionality
-python tests/run_tests.py scams      # Scam detection
-python tests/run_tests.py advanced   # Advanced algorithms
-python tests/run_tests.py content    # Content analysis
-```
-
-### Individual Tests
-```bash
-python tests/test_analyzer.py        # Main detection engine
-python tests/test_spam_detection.py  # Phishing pattern detection
-python tests/debug_extension.py      # Extension debugging
+phishdetector/
+├── back/                 # Python backend
+│   ├── app.py            # Flask server
+│   ├── analyzer.py       # Main detection engine
+│   ├── config.py         # Configuration settings
+│   └── threat_intel.py   # External threat data
+├── extension/            # Chrome extension
+│   ├── popup.html        # Extension popup UI
+│   ├── content.js        # Content script for Gmail
+│   ├── background.js     # Background service worker
+│   └── manifest.json     # Extension manifest
+├── tests/               # Test files
+└── README.md           # This file
 ```
 
 ## Configuration
 
-### Backend Settings (`back/config.py`)
-```python
-# Detection threshold
-PHISHING_THRESHOLD = 50
+You can change settings in `back/config.py`:
 
-# Trusted domains
-TRUSTED_DOMAINS = {
-    'google.com', 'microsoft.com', 'apple.com',
-    'linkedin.com', 'facebook.com', 'amazon.com'
-}
-
-# Protected brands
-PROTECTED_BRANDS = {
-    'paypal': 'paypal.com',
-    'microsoft': 'microsoft.com',
-    'google': 'google.com'
-}
-
-# Suspicious TLDs
-DANGEROUS_TLDS = ['.tk', '.ml', '.ga', '.cf', '.top']
-```
-
-### Extension Features
-- Manual scanning with visual feedback
-- User reputation system (trusted/blocked senders)
-- Detailed risk scoring and explanations
-- Action buttons for trust/report functionality
-
-## Development
-
-### Adding New Detection Patterns
-1. Update patterns in `back/analyzer.py`
-2. Add test cases in `tests/`
-3. Run tests to verify accuracy
-
-### Extending Language Support
-1. Add keywords to `config.py` LEXICON
-2. Create language-specific tests
-3. Update detection logic as needed
+- **Phishing threshold**: Score needed to flag an email as phishing (default: 50)
+- **Protected brands**: List of companies to protect from impersonation
+- **Trusted domains**: Domains that are always considered safe
+- **Dangerous TLDs**: Suspicious top-level domains
 
 ## Performance
 
-### Benchmarks
-- **Analysis Time**: <50ms average
+The system is pretty fast:
+- Analysis time: Usually under 0.01 seconds
+- Memory usage: Lightweight, runs fine on most computers
+- Caching: Remembers emails it's seen before to speed things up
 
-### Privacy Protection
-- All processing happens locally
-- No email content leaves your device
-- User control over trust/block lists
+## Privacy
 
-## Current Status
-
-### Working Features
-- Core detection engine with 6-layer analysis
-- Chrome extension with Gmail integration
-- Backend API with caching
-- Database system with threat intelligence
-
-### Known Limitations
-- Limited to known attack patterns
-- May have false positives with marketing emails (<50% for some of them)
-- Database needs regular updates for new threats
-- Extension compatibility varies across email providers (only works with gmail for now)
+Your privacy is important:
+- All processing happens locally on your device
+- No data is sent to external servers (except for optional threat intel)
+- No tracking or analytics
+- Your emails never leave your computer
 
 ## Contributing
 
-Contributions are welcome! Areas for contribution include:
-- New detection patterns (or even ideas)
-- Additional language support
-- Performance improvements
-- Bug fixes and testing
-- Documentation improvements (they are not that good actually)
-
-### Development Workflow
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Open Pull Request
+If you want to help improve this project:
+1. Fork it
+2. Make your changes
+3. Add tests for new features
+4. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Disclaimer
-
-This tool is provided for educational and research purposes. While it can help identify potential phishing threats, it should not be relied upon as the sole means of protection against phishing attacks. Always exercise caution when handling suspicious emails.
+This project is for educational purposes. Use it responsibly and at your own risk.
 
 ## Acknowledgments
 
-- Open-source security community for inspiration and techniques
-- Various phishing research datasets for testing
-- Contributors who help improve the project
+This was my school project for learning about cybersecurity and web development. Thanks to everyone who helped me learn!
+
+---
+
+*Built with ❤️ by a student trying to make the internet safer*

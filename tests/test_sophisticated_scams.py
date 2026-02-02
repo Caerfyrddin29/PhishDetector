@@ -24,7 +24,7 @@ result1 = analyzer.analyze(
 
 print('🎭 Sophisticated Impersonation Scam:')
 print(f'Score: {result1["score"]}')
-print(f'Phishing: {result1["phishing"]}')
+print(f'Phishing: {result1["is_phishing"]}')
 print(f'Reasons: {result1["reasons"]}')
 
 # Test 2: Advanced crypto/investment scam
@@ -51,7 +51,7 @@ result2 = analyzer.analyze(
 
 print('\n💎 Advanced Crypto Investment Scam:')
 print(f'Score: {result2["score"]}')
-print(f'Phishing: {result2["phishing"]}')
+print(f'Phishing: {result2["is_phishing"]}')
 print(f'Reasons: {result2["reasons"]}')
 
 # Test 3: Social engineering scam
@@ -77,7 +77,7 @@ result3 = analyzer.analyze(
 
 print('\n🤝 Social Engineering Scam:')
 print(f'Score: {result3["score"]}')
-print(f'Phishing: {result3["phishing"]}')
+print(f'Phishing: {result3["is_phishing"]}')
 print(f'Reasons: {result3["reasons"]}')
 
 # Test 4: Emotional manipulation scam
@@ -100,7 +100,7 @@ result4 = analyzer.analyze(
 
 print('\n🎯 Emotional Manipulation Scam:')
 print(f'Score: {result4["score"]}')
-print(f'Phishing: {result4["phishing"]}')
+print(f'Phishing: {result4["is_phishing"]}')
 print(f'Reasons: {result4["reasons"]}')
 
 print(f'\n📊 Summary:')

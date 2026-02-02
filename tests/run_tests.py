@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Test runner for the PhishDetector phishing detection system.
+Test runner for my phishing detector project.
 
-This module provides a comprehensive test execution framework for running
-individual test files or the complete test suite. It handles dynamic test
-module loading and provides standardized test execution with error handling.
+This runs all the tests I wrote to make sure the phishing detection
+actually works. It can run all tests at once or specific ones.
 
 Usage:
     python run_tests.py                    # Run all tests
-    python run_tests.py --specific test   # Run specific test category
+    python run_tests.py specific_test.py    # Run one test file
 """
 
 import os
@@ -16,21 +15,20 @@ import sys
 import importlib.util
 from pathlib import Path
 
-# Add parent directory to path for imports
+# Add parent directory to path so we can import our modules
 sys.path.append(str(Path(__file__).parent.parent))
 
 def run_test_file(test_file):
     """
-    Execute a single test file with error handling and reporting.
+    Run a single test file and show what happened.
     
-    Dynamically loads and executes the specified test module, providing
-    clear status reporting and error handling for failed test executions.
+    Loads the test file and runs it, showing any errors if they happen.
     
     Args:
-        test_file (str): Path to the test file to execute
+        test_file (str): Path to the test file to run
         
     Returns:
-        bool: True if test executed successfully, False otherwise
+        bool: True if test worked, False if it failed
     """
     print(f"\n{'='*50}")
     print(f"Running {test_file}")
@@ -46,10 +44,11 @@ def run_test_file(test_file):
         return False
 
 def main():
-    """Main test runner"""
+    """Main test runner function"""
     test_dir = Path(__file__).parent
     
-    # Test categories
+    
+    # Different test categories I made
     categories = {
         'basic': ['test_analyzer.py', 'test_spam_detection.py'],
         'scams': ['test_crypto_scam.py', 'test_easy_cash_scam.py', 'test_sophisticated_scams.py'],
@@ -60,7 +59,7 @@ def main():
     }
     
     if len(sys.argv) > 1:
-        # Run specific category
+        # Run specific category if they asked for one
         category = sys.argv[1].lower()
         if category == 'all':
             # Run all tests
@@ -72,10 +71,10 @@ def main():
             print(f"Available categories: {', '.join(categories.keys())}, all")
             return
     else:
-        # Default: run basic tests
+        # Default: just run basic tests
         test_files = [test_dir / f for f in categories['basic']]
     
-    # Run tests
+    # Run all the tests and count how many pass
     passed = 0
     total = len(test_files)
     

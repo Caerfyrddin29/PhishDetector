@@ -20,7 +20,7 @@ result1 = analyzer.analyze(
 
 print('🧠 Next-Gen Conversational Anomaly Detection:')
 print(f'Score: {result1["score"]}')
-print(f'Phishing: {result1["phishing"]}')
+print(f'Phishing: {result1["is_phishing"]}')
 print(f'Reasons: {result1["reasons"]}')
 
 # Test 2: Advanced psychological manipulation
@@ -39,7 +39,7 @@ result2 = analyzer.analyze(
 
 print('\n🎭 Advanced Psychological Manipulation:')
 print(f'Score: {result2["score"]}')
-print(f'Phishing: {result2["phishing"]}')
+print(f'Phishing: {result2["is_phishing"]}')
 print(f'Reasons: {result2["reasons"]}')
 
 # Test 3: Contextual anomaly with impossible constraints
@@ -58,7 +58,7 @@ result3 = analyzer.analyze(
 
 print('\n⏰ Contextual Anomaly Detection:')
 print(f'Score: {result3["score"]}')
-print(f'Phishing: {result3["phishing"]}')
+print(f'Phishing: {result3["is_phishing"]}')
 print(f'Reasons: {result3["reasons"]}')
 
 # Test 4: Personal email with business language (sender behavior)
@@ -77,7 +77,7 @@ result4 = analyzer.analyze(
 
 print('\n📧 Sender Behavior Analysis:')
 print(f'Score: {result4["score"]}')
-print(f'Phishing: {result4["phishing"]}')
+print(f'Phishing: {result4["is_phishing"]}')
 print(f'Reasons: {result4["reasons"]}')
 
 print(f'\n🚀 Next-Gen Detection Summary:')

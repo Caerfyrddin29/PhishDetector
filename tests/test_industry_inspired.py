@@ -24,7 +24,7 @@ result1 = analyzer.analyze(
 
 print('💼 Microsoft-Style BEC Detection:')
 print(f'Score: {result1["score"]}')
-print(f'Phishing: {result1["phishing"]}')
+print(f'Phishing: {result1["is_phishing"]}')
 print(f'Reasons: {result1["reasons"]}')
 
 # Test 2: Proofpoint-style social engineering
@@ -46,7 +46,7 @@ result2 = analyzer.analyze(
 
 print('\n🎯 Proofpoint-Style Social Engineering:')
 print(f'Score: {result2["score"]}')
-print(f'Phishing: {result2["phishing"]}')
+print(f'Phishing: {result2["is_phishing"]}')
 print(f'Reasons: {result2["reasons"]}')
 
 # Test 3: Advanced crypto scam (industry best practices)
@@ -67,7 +67,7 @@ result3 = analyzer.analyze(
 
 print('\n🚀 Advanced Crypto Scam Detection:')
 print(f'Score: {result3["score"]}')
-print(f'Phishing: {result3["phishing"]}')
+print(f'Phishing: {result3["is_phishing"]}')
 print(f'Reasons: {result3["reasons"]}')
 
 print(f'\n📊 Industry-Inspired Detection Summary:')

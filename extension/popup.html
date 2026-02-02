@@ -3,62 +3,490 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishDetector</title>
     <style>
-        :root { --bg: #ffffff; --text: #1a1a1a; --primary: #1a73e8; --card: #f8f9fa; --success: #34a853; --danger: #ea4335; --warning: #fbbc04; }
-        [data-theme="dark"] { --bg: #121212; --text: #e0e0e0; --primary: #8ab4f8; --card: #1e1e1e; --success: #81c995; --danger: #f28b82; --warning: #fdd663; }
-        body { width: 380px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 16px; margin: 0; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .status-card { background: var(--card); border-radius: 12px; padding: 15px; border-left: 4px solid var(--primary); text-align: center; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-item { background: var(--card); padding: 12px; border-radius: 10px; text-align: center; }
-        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; color: var(--primary); }
-        .stat-label { font-size: 0.7rem; opacity: 0.7; font-weight: bold; }
-        .btn { cursor: pointer; background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .score-display { margin: 15px 0; padding: 12px; background: var(--card); border-radius: 10px; text-align: center; }
-        .score-bar { width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin: 8px 0; }
-        .score-fill { height: 100%; transition: width 0.3s ease, background-color 0.3s ease; }
-        .chart-container { margin-top: 20px; background: var(--card); padding: 15px; border-radius: 12px; }
-        .chart-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; text-align: center; }
-        #scoreChart { width: 100%; height: 150px; }
-        .icon { font-size: 1.2rem; margin-right: 4px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root { 
+            --bg: #ffffff; 
+            --text: #0f172a; 
+            --primary: #3b82f6; 
+            --primary-dark: #2563eb;
+            --card: #f8fafc; 
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --warning: #f59e0b;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        [data-theme="dark"] { 
+            --bg: #0f172a; 
+            --text: #f1f5f9; 
+            --primary: #60a5fa; 
+            --primary-dark: #3b82f6;
+            --card: #1e293b; 
+            --success: #34d399; 
+            --danger: #f87171; 
+            --warning: #fbbf24;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body { 
+            width: 420px; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            margin: 0; 
+            line-height: 1.6;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 24px; 
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            width: 32px;
+            height: 32px;
+            margin-right: 8px;
+            border-radius: 6px;
+        }
+        
+        .header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .status-card { 
+            background: var(--card); 
+            border-radius: 16px; 
+            padding: 20px; 
+            border-left: 4px solid var(--primary); 
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 3px var(--shadow);
+        }
+        
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient);
+        }
+        
+        .stat-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+            margin-top: 20px; 
+        }
+        
+        .stat-item { 
+            background: var(--card); 
+            padding: 16px; 
+            border-radius: 12px; 
+            text-align: center;
+            box-shadow: 0 1px 3px var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+        
+        .stat-val { 
+            display: block; 
+            font-size: 1.75rem; 
+            font-weight: 700; 
+            color: var(--primary); 
+            margin-bottom: 4px;
+        }
+        
+        .stat-label { 
+            font-size: 0.75rem; 
+            opacity: 0.7; 
+            font-weight: 600; 
+            letter-spacing: 0.5px;
+        }
+        
+        .btn { 
+            cursor: pointer; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 10px 16px; 
+            border-radius: 8px; 
+            font-size: 0.875rem; 
+            font-weight: 600; 
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-icon {
+            padding: 10px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-display { 
+            margin: 20px 0; 
+            padding: 20px; 
+            background: var(--card); 
+            border-radius: 16px; 
+            text-align: center;
+            box-shadow: 0 1px 3px var(--shadow);
+        }
+        
+        .score-bar { 
+            width: 100%; 
+            height: 12px; 
+            background: var(--border); 
+            border-radius: 6px; 
+            overflow: hidden; 
+            margin: 12px 0;
+            position: relative;
+        }
+        
+        .score-fill { 
+            height: 100%; 
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease; 
+            border-radius: 6px;
+            position: relative;
+        }
+        
+        .score-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .chart-container { 
+            margin-top: 24px; 
+            background: var(--card); 
+            padding: 20px; 
+            border-radius: 16px;
+            box-shadow: 0 1px 3px var(--shadow);
+        }
+        
+        .chart-title { 
+            font-size: 0.875rem; 
+            font-weight: 600; 
+            margin-bottom: 16px; 
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+#scoreChart { 
+    width: 100%; 
+    height: 160px; 
+}
+        
+.icon { 
+    font-size: 1.25rem; 
+    margin-right: 6px; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+        
+.tabs { 
+    display: flex; 
+    margin-bottom: 20px; 
+    background: var(--card);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: inset 0 1px 3px var(--shadow);
+}
+        
+        .tab { 
+            flex: 1; 
+            padding: 12px; 
+            text-align: center; 
+            cursor: pointer; 
+            border-radius: 8px;
+            font-weight: 600; 
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            color: var(--text);
+            opacity: 0.7;
+        }
+        
+        .tab:hover {
+            opacity: 1;
+        }
+        
+        .tab.active { 
+            background: var(--primary);
+            color: white;
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .tab-content { 
+            display: none; 
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .domain-list { 
+            max-height: 240px; 
+            overflow-y: auto; 
+            background: var(--card); 
+            border-radius: 12px; 
+            padding: 12px;
+            box-shadow: inset 0 1px 3px var(--shadow);
+        }
+        
+        .domain-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .domain-list::-webkit-scrollbar-track {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        
+        .domain-list::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+        
+        .domain-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px; 
+            margin: 6px 0; 
+            background: var(--bg); 
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+        }
+        
+        .domain-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        
+        .domain-actions { 
+            display: flex; 
+            gap: 6px; 
+        }
+        
+        .btn-small { 
+            padding: 6px 12px; 
+            font-size: 0.75rem; 
+            border-radius: 6px; 
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger { 
+            background: var(--danger); 
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success { 
+            background: var(--success); 
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        
+        .add-domain { 
+            display: flex; 
+            gap: 8px; 
+            margin-top: 12px; 
+        }
+        
+        .add-domain input { 
+            flex: 1; 
+            padding: 12px; 
+            border: 2px solid var(--border); 
+            border-radius: 8px; 
+            background: var(--bg); 
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        .add-domain input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .add-domain input::placeholder {
+            opacity: 0.5;
+        }
+        
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 12px;
+            background: var(--card);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .checkbox-wrapper:hover {
+            background: var(--border);
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h3 style="margin:0"><span class="icon">🛡️</span>PhishDetector</h3>
-        <div>
-            <button id="refresh-btn" class="btn" style="margin-right: 8px;"><span class="icon">🔄</span>Refresh</button>
-            <button id="theme-toggle" class="btn"><span class="icon">🌓</span>Theme</button>
-        </div>
-    </div>
-    <div class="status-card">
-        <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 4px;">System Health</div>
-        <div id="status-text" style="font-size: 1rem; font-weight: bold; color: #ea4335;"><span class="icon">⚠️</span>Checking Backend...</div>
-    </div>
-    
-    <div class="score-display">
-        <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 4px;">Average Risk Score</div>
-        <div style="font-size: 1.8rem; font-weight: bold;" id="avg-score">0</div>
-        <div class="score-bar">
-            <div class="score-fill" id="score-fill" style="width: 0%; background: var(--success);"></div>
-        </div>
-        <div style="font-size: 0.7rem; opacity: 0.7;" id="score-label">Safe</div>
-    </div>
-    
-    <div class="stat-grid">
-        <div class="stat-item">
-            <span class="stat-val" id="count-scanned">0</span>
-            <span class="stat-label">EMAILS SCANNED</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-val" style="color:var(--danger)" id="count-threats">0</span>
-            <span class="stat-label">THREATS BLOCKED</span>
+        <h3><img src="logo.svg" alt="PhishDetector" class="logo">PhishDetector</h3>
+        <div class="header-actions">
+            <button id="refresh-btn" class="btn btn-icon"><span class="icon">🔄</span></button>
+            <button id="theme-toggle" class="btn btn-icon"><span class="icon">🌓</span></button>
         </div>
     </div>
     
-    <div class="chart-container">
-        <div class="chart-title">Recent Scan Scores</div>
-        <canvas id="scoreChart"></canvas>
+    <div class="tabs">
+        <div class="tab active" data-tab="dashboard">📊 Dashboard</div>
+        <div class="tab" data-tab="domains">🚫 Domains</div>
+    </div>
+    
+    <div id="dashboard" class="tab-content active">
+        <div class="status-card">
+            <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 4px;">System Health</div>
+            <div id="status-text" style="font-size: 1rem; font-weight: bold; color: #ea4335;"><span class="icon">⚠️</span>Checking Backend...</div>
+        </div>
+        
+        <div class="score-display">
+            <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 4px;">Average Risk Score</div>
+            <div style="font-size: 1.8rem; font-weight: bold;" id="avg-score">0</div>
+            <div class="score-bar">
+                <div class="score-fill" id="score-fill" style="width: 0%; background: var(--success);"></div>
+            </div>
+            <div style="font-size: 0.7rem; opacity: 0.7;" id="score-label">Safe</div>
+        </div>
+        
+        <div class="stat-grid">
+            <div class="stat-item">
+                <span class="stat-val" id="count-scanned">0</span>
+                <span class="stat-label">EMAILS SCANNED</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" style="color:var(--danger)" id="count-threats">0</span>
+                <span class="stat-label">THREATS BLOCKED</span>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">Recent Scan Scores</div>
+            <canvas id="scoreChart"></canvas>
+        </div>
+    </div>
+    
+    <div id="domains" class="tab-content">
+        <div style="margin-bottom: 15px;">
+            <h4 style="margin:0 0 10px 0;">Blocked Domains</h4>
+            <div class="domain-list" id="blocked-domains-list">
+                <div style="text-align: center; opacity: 0.6; padding: 20px;">No blocked domains yet</div>
+            </div>
+            <div class="add-domain">
+                <input type="text" id="new-domain" placeholder="Enter domain to block (e.g., spam.com)">
+                <button id="add-domain-btn" class="btn btn-small">Block</button>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h4 style="margin:0 0 10px 0;">Auto-Spam Settings</h4>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="auto-spam-enabled" checked>
+                <span>Automatically move emails from blocked domains to spam</span>
+            </div>
+        </div>
     </div>
     
     <script src="popup.js"></script>

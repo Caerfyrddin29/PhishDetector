@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Animation Test</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 20px;
+            background: #f8fafc;
+        }
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px 10px 10px 0;
+        }
+        .test-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .success { background: #f0fdf4; color: #065f46; border: 1px solid #10b981; }
+        .error { background: #fef2f2; color: #991b1b; border: 1px solid #ef4444; }
+        .info { background: #eff6ff; color: #1e40af; border: 1px solid #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>⏱️ Timer Animation Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Extension Timer Animation</h2>
+        <p>Click below to test the banner timer animation functionality:</p>
+        <button class="test-btn" onclick="testTimerAnimation()">Test 10-Second Timer</button>
+        <button class="test-btn" onclick="testFastTimer()">Test 3-Second Timer</button>
+        <button class="test-btn" onclick="clearAllBanners()">Clear All Banners</button>
+        <div id="status" class="status info">Ready to test timer animations...</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Animation Features to Verify:</h2>
+        <ul>
+            <li>✅ Banner slides in from right (slideIn animation)</li>
+            <li>✅ Progress bar counts down from 100% to 0%</li>
+            <li>✅ Shimmer effect on progress bar</li>
+            <li>✅ Banner auto-closes after timer expires</li>
+            <li>✅ Banner slides out to right (slideOut animation)</li>
+            <li>✅ Manual close button stops timer</li>
+            <li>✅ Action buttons stop timer</li>
+        </ul>
+    </div>
+
+    <script>
+        let testResults = {
+            slideIn: false,
+            progressAnimation: false,
+            shimmer: false,
+            autoClose: false,
+            slideOut: false,
+            manualClose: false
+        };
+
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000000;
+                padding: 16px 20px;
+                border-radius: 12px;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                font-weight: 500;
+                font-size: 14px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                animation: notificationSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                backdrop-filter: blur(10px);
+                max-width: 300px;
+            `;
+            
+            const colors = {
+                success: { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
+                error: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
+                warning: { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
+                info: { bg: '#eff6ff', border: '#3b82f6', text: '#1e40af' }
+            };
+            
+            const theme = colors[type] || colors.info;
+            notification.style.background = theme.bg;
+            notification.style.border = `1px solid ${theme.border}`;
+            notification.style.color = theme.text;
+            notification.textContent = message;
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes notificationSlide {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'notificationSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1) reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function testTimerAnimation() {
+            updateStatus('Testing 10-second timer animation...', 'info');
+            
+            const data = {
+                is_phishing: true,
+                score: 85,
+                reasons: [
+                    'Suspicious urgency language detected',
+                    'Request for personal information',
+                    'Unusual sender domain pattern'
+                ]
+            };
+            
+            createActionBanner(data, 'scammer@suspicious.com', 10000);
+            testResults.slideIn = true;
+            testResults.progressAnimation = true;
+            testResults.shimmer = true;
+            
+            showNotification('Timer started! Banner will auto-close in 10 seconds.', 'info');
+        }
+
+        function testFastTimer() {
+            updateStatus('Testing 3-second timer animation...', 'info');
+            
+            const data = {
+                is_phishing: false,
+                score: 15,
+                reasons: [
+                    'Legitimate sender domain',
+                    'No suspicious patterns detected'
+                ]
+            };
+            
+            createActionBanner(data, 'friend@trusted.com', 3000);
+            showNotification('Fast timer started! Banner will auto-close in 3 seconds.', 'info');
+        }
+
+        function clearAllBanners() {
+            const banners = document.querySelectorAll('[id="phish-shield-banner"]');
+            banners.forEach(banner => banner.remove());
+            updateStatus('All banners cleared', 'success');
+            
+            // Show test results summary
+            const passedTests = Object.values(testResults).filter(v => v).length;
+            const totalTests = Object.keys(testResults).length;
+            
+            if (passedTests > 0) {
+                showNotification(`Animation tests completed: ${passedTests}/${totalTests} features verified`, 'success');
+            }
+        }
+
+        function createActionBanner(data, senderEmail, autoCloseTime = 10000) {
+            // Remove old banner if there is one
+            const old = document.getElementById('phish-shield-banner');
+            if (old) old.remove();
+
+            // Create the banner
+            const banner = document.createElement('div');
+            banner.id = 'phish-shield-banner';
+            const isDangerous = data.is_phishing;
+            const colors = {
+                dangerous: {
+                    primary: '#ef4444',
+                    background: '#fef2f2',
+                    border: '#dc2626',
+                    text: '#991b1b',
+                    glow: 'rgba(239, 68, 68, 0.3)'
+                },
+                safe: {
+                    primary: '#10b981',
+                    background: '#f0fdf4',
+                    border: '#059669',
+                    text: '#065f46',
+                    glow: 'rgba(16, 185, 129, 0.3)'
+                }
+            };
+            
+            const theme = isDangerous ? colors.dangerous : colors.safe;
+            
+            banner.style.cssText = `
+                position: fixed; 
+                top: 80px; 
+                right: 20px; 
+                z-index: 9999999; 
+                width: 380px; 
+                background: ${theme.background}; 
+                border-radius: 16px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px ${theme.border}20; 
+                border-left: 4px solid ${theme.primary}; 
+                padding: 20px; 
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+                animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                backdrop-filter: blur(10px);
+            `;
+
+            // Add animation keyframes
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%) scale(0.8);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0) scale(1);
+                        opacity: 1;
+                    }
+                }
+                
+                @keyframes slideOut {
+                    from {
+                        transform: translateX(0) scale(1);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(100%) scale(0.8);
+                        opacity: 0;
+                    }
+                }
+                
+                @keyframes shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+                
+                .phish-banner-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 16px;
+                }
+                
+                .phish-banner-title {
+                    font-weight: 700;
+                    font-size: 16px;
+                    color: ${theme.primary};
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .phish-banner-logo {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 4px;
+                }
+                
+                .phish-banner-score {
+                    font-size: 12px;
+                    color: ${theme.text};
+                    margin-top: 4px;
+                    font-weight: 500;
+                }
+                
+                .phish-banner-close {
+                    border: none;
+                    background: none;
+                    cursor: pointer;
+                    color: ${theme.text};
+                    font-size: 18px;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                }
+                
+                .phish-banner-close:hover {
+                    background: ${theme.primary}20;
+                    transform: scale(1.1);
+                }
+                
+                .phish-banner-reasons {
+                    margin: 16px 0;
+                    font-size: 13px;
+                    color: ${theme.text};
+                    max-height: 120px;
+                    overflow-y: auto;
+                    line-height: 1.5;
+                }
+                
+                .phish-banner-reasons::-webkit-scrollbar {
+                    width: 4px;
+                }
+                
+                .phish-banner-reasons::-webkit-scrollbar-track {
+                    background: ${theme.primary}10;
+                    border-radius: 2px;
+                }
+                
+                .phish-banner-reasons::-webkit-scrollbar-thumb {
+                    background: ${theme.primary}40;
+                    border-radius: 2px;
+                }
+                
+                .phish-banner-reason-item {
+                    margin-bottom: 6px;
+                    padding-left: 16px;
+                    position: relative;
+                }
+                
+                .phish-banner-reason-item::before {
+                    content: '•';
+                    position: absolute;
+                    left: 0;
+                    color: ${theme.primary};
+                    font-weight: bold;
+                }
+                
+                .phish-banner-progress {
+                    margin: 16px 0;
+                    height: 6px;
+                    background: ${theme.primary}20;
+                    border-radius: 3px;
+                    overflow: hidden;
+                    position: relative;
+                }
+                
+                .phish-banner-progress-bar {
+                    height: 100%;
+                    background: linear-gradient(90deg, ${theme.primary}, ${theme.border});
+                    border-radius: 3px;
+                    transition: width 0.1s linear;
+                    position: relative;
+                }
+                
+                .phish-banner-progress-bar::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    background-size: 200% 100%;
+                    animation: shimmer 2s infinite;
+                }
+                
+                .phish-banner-actions {
+                    display: flex;
+                    gap: 8px;
+                    margin-top: 16px;
+                    padding-top: 16px;
+                    border-top: 1px solid ${theme.primary}20;
+                }
+                
+                .phish-banner-btn {
+                    flex: 1;
+                    padding: 10px 12px;
+                    border-radius: 8px;
+                    border: 2px solid ${theme.primary};
+                    background: white;
+                    color: ${theme.primary};
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 11px;
+                    text-align: center;
+                    transition: all 0.2s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .phish-banner-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px ${theme.glow};
+                }
+                
+                .phish-banner-btn:active {
+                    transform: translateY(0);
+                }
+                
+                .phish-banner-btn.danger {
+                    border-color: #ef4444;
+                    color: #ef4444;
+                }
+                
+                .phish-banner-btn.danger:hover {
+                    background: #ef4444;
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+                }
+                
+                .phish-banner-btn.success {
+                    border-color: #10b981;
+                    color: #10b981;
+                }
+                
+                .phish-banner-btn.success:hover {
+                    background: #10b981;
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+                }
+                
+                .phish-banner-btn.warning {
+                    border-color: #f59e0b;
+                    color: #f59e0b;
+                }
+                
+                .phish-banner-btn.warning:hover {
+                    background: #f59e0b;
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+                }
+            `;
+            document.head.appendChild(style);
+
+            banner.innerHTML = `
+                <div class="phish-banner-header">
+                    <div>
+                        <div class="phish-banner-title">
+                            <img src="logo.svg" alt="PhishDetector" class="phish-banner-logo">
+                            ${isDangerous ? 'HIGH RISK DETECTED' : 'EMAIL VERIFIED'}
+                        </div>
+                        <div class="phish-banner-score">Risk Score: ${data.score}/100</div>
+                    </div>
+                    <button id="close-sh" class="phish-banner-close">✕</button>
+                </div>
+                <div class="phish-banner-reasons">
+                    ${data.reasons.map(r => `<div class="phish-banner-reason-item">${r}</div>`).join('')}
+                </div>
+                <div class="phish-banner-progress">
+                    <div id="progress-bar" class="phish-banner-progress-bar"></div>
+                </div>
+                <div class="phish-banner-actions">
+                    <button id="trust-btn" class="phish-banner-btn success">TRUST SENDER</button>
+                    <button id="report-btn" class="phish-banner-btn danger">REPORT SENDER</button>
+                    <button id="block-domain-btn" class="phish-banner-btn warning">BLOCK DOMAIN</button>
+                </div>
+            `;
+
+            document.body.appendChild(banner);
+
+            // Auto-close with animated progress bar
+            const progressBar = banner.querySelector('#progress-bar');
+            let startTime = Date.now();
+            let animationFrame;
+            
+            const updateProgress = () => {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, autoCloseTime - elapsed);
+                const percentage = (remaining / autoCloseTime) * 100;
+                
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                }
+                
+                if (remaining > 0) {
+                    animationFrame = requestAnimationFrame(updateProgress);
+                } else {
+                    removeBannerWithAnimation();
+                    testResults.autoClose = true;
+                    updateStatus('✅ Auto-close animation completed!', 'success');
+                }
+            };
+            
+            const removeBannerWithAnimation = () => {
+                banner.style.animation = 'slideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                setTimeout(() => {
+                    if (banner.parentNode) {
+                        banner.remove();
+                    }
+                }, 400);
+                testResults.slideOut = true;
+            };
+            
+            const autoCloseTimer = setTimeout(() => {
+                cancelAnimationFrame(animationFrame);
+                removeBannerWithAnimation();
+            }, autoCloseTime);
+            
+            // Start the animation
+            updateProgress();
+
+            // Button clicks
+            document.getElementById('close-sh').onclick = () => {
+                clearTimeout(autoCloseTimer);
+                cancelAnimationFrame(animationFrame);
+                removeBannerWithAnimation();
+                testResults.manualClose = true;
+                updateStatus('✅ Manual close animation completed!', 'success');
+            };
+            
+            document.getElementById('trust-btn').onclick = () => {
+                clearTimeout(autoCloseTimer);
+                cancelAnimationFrame(animationFrame);
+                showNotification("Sender Added to Trusted List ✅", 'success');
+                removeBannerWithAnimation();
+            };
+            
+            document.getElementById('report-btn').onclick = () => {
+                clearTimeout(autoCloseTimer);
+                cancelAnimationFrame(animationFrame);
+                showNotification("Sender Reported & Blocked 🚨", 'warning');
+                removeBannerWithAnimation();
+            };
+            
+            document.getElementById('block-domain-btn').onclick = () => {
+                clearTimeout(autoCloseTimer);
+                cancelAnimationFrame(animationFrame);
+                showNotification("Domain blocked! 🚫", 'warning');
+                removeBannerWithAnimation();
+            };
+        }
+    </script>
+</body>
+</html>

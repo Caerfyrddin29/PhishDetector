@@ -23,7 +23,7 @@ result = analyzer.analyze(
 
 print(f'Crypto Scam Detection Results:')
 print(f'Score: {result["score"]}')
-print(f'Phishing: {result["phishing"]}')
+print(f'Phishing: {result["is_phishing"]}')
 print(f'Reasons: {result["reasons"]}')
 
 # Test with a suspicious crypto link
@@ -36,5 +36,5 @@ result2 = analyzer.analyze(
 
 print(f'\nWith Suspicious Link:')
 print(f'Score: {result2["score"]}')
-print(f'Phishing: {result2["phishing"]}')
+print(f'Phishing: {result2["is_phishing"]}')
 print(f'Reasons: {result2["reasons"]}')

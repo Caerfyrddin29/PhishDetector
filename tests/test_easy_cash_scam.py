@@ -16,7 +16,7 @@ result1 = analyzer.analyze(
 
 print('Easy Cash Scam Detection:')
 print(f'Score: {result1["score"]}')
-print(f'Phishing: {result1["phishing"]}')
+print(f'Phishing: {result1["is_phishing"]}')
 print(f'Reasons: {result1["reasons"]}')
 
 # Test 2: Promotion with click here
@@ -32,7 +32,7 @@ result2 = analyzer.analyze(
 
 print('\nPromotion Scam Detection:')
 print(f'Score: {result2["score"]}')
-print(f'Phishing: {result2["phishing"]}')
+print(f'Phishing: {result2["is_phishing"]}')
 print(f'Reasons: {result2["reasons"]}')
 
 # Test 3: Work from home scam
@@ -47,5 +47,5 @@ result3 = analyzer.analyze(
 
 print('\nWork From Home Scam Detection:')
 print(f'Score: {result3["score"]}')
-print(f'Phishing: {result3["phishing"]}')
+print(f'Phishing: {result3["is_phishing"]}')
 print(f'Reasons: {result3["reasons"]}')
