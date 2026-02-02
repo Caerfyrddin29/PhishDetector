@@ -26,12 +26,17 @@ def analyze():
         if not data:
             return jsonify({"error": "No JSON"}), 400
             
+        # Convert string links to objects if needed
+        links = data.get('links', [])
+        if links and isinstance(links[0], str):
+            links = [{"href": link} for link in links]
+            
         # Run our phishing detector
         result = analyzer.analyze(
             body=data.get('body', ''),
-            links=data.get('links', []),
-            metadata=data.get('metadata', {}),
-            sender=data.get('sender', '')
+            links=links,
+            sender=data.get('sender', ''),
+            metadata=data.get('metadata', {})
         )
         return jsonify(result)
     except Exception as e:
