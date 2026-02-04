@@ -42,7 +42,7 @@ class URLDatabase:
         """
         Download the list of known bad websites from GitHub
         """
-        print("🚀 Getting bad websites from the internet...")
+        print("🚀 Getting dangerous websites from the internet...")
         try:
             r = requests.get(Config.GITHUB_DB_URL, timeout=15)
             if r.status_code == 200:
